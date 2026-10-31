@@ -71,6 +71,7 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 │  ├─ lib/clerk.js            ตรวจ VITE_CLERK_PUBLISHABLE_KEY
 │  └─ index.css
 ├─ db/schema.sql              ตาราง + ฟังก์ชัน approve_pillbox_request
+├─ db/seed.dev.sql            ข้อมูลตัวอย่างสำหรับ branch dev
 ├─ wrangler.toml              Pages config + R2 binding
 ├─ .env.example               ตัวแปรฝั่งเบราว์เซอร์
 ├─ .dev.vars.example          ตัวแปรฝั่งเซิร์ฟเวอร์ (local)
@@ -104,6 +105,23 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 4. ตรวจว่ามีตาราง `patients`, `devices`, `alerts`, `pillbox_approvals`,
    `device_commands`, `caregiver_profiles`, `patient_files` และฟังก์ชัน
    `approve_pillbox_request(uuid, text)`
+
+5. (ทางเลือก) ข้อมูลตัวอย่างสำหรับทดสอบ — ควรใช้ branch `dev` แยกจาก `main`
+   เพื่อไม่ให้ข้อมูลทดลองปนกับ production
+
+   ```powershell
+   neon branches create --name dev      # ถ้ายังไม่มี branch dev
+   neon link --branch dev               # ให้ .env.local ชี้ไปที่ dev
+   psql "$env:NEON_DATABASE_URL" -f db/seed.dev.sql
+   ```
+
+   - seed สร้างผู้ป่วย 3 คน (1 คน archived), อุปกรณ์ 4 ตัว, แจ้งเตือน 3 รายการ,
+     คำขออนุมัติ 4 แบบ (pending / expired / ไม่มี BLE / approved) และโปรไฟล์ผู้ดูแล
+   - `owner_id` ในไฟล์เป็น placeholder `user_seed_demo_caregiver`
+     ต้องเปลี่ยนเป็น Clerk user id จริง (`user_...`) ก่อนล็อกอินทดสอบ
+   - รันซ้ำได้เสมอ (ลบข้อมูลของ seed owner ก่อนแล้วใส่ใหม่)
+   - คำขอ pending ใน seed มีอายุ 15 นาที (production จริง 60 วินาที)
+     เพื่อให้กดอนุมัติทดสอบจากหน้าเว็บได้ทัน
 
 ### 5.2 Clerk
 
