@@ -231,6 +231,15 @@ npm run build
 > ครั้งแรกที่ `wrangler pages dev` ทำงาน อาจใช้เวลาสร้าง local R2 state สักครู่
 > ถ้าเจอ `Unable to connect` ให้รอจนขึ้น `Ready on http://127.0.0.1:8788`
 
+> **สำคัญ:** `wrangler pages dev` อ่าน `.dev.vars` ตอนเริ่มเท่านั้น ถ้าแก้ key
+> (`CLERK_SECRET_KEY`, `NEON_DATABASE_URL`, ...) ต้อง **กด Ctrl+C แล้วรัน `npm run dev` ใหม่**
+> — Vite จะ restart เองเมื่อ `.env.local` เปลี่ยน แต่ตัว API ไม่ restart ตาม
+> อาการที่เจอถ้าลืม: sign-in ผ่านแต่ API ตอบ `401 เซสชันหมดอายุหรือ Token ไม่ถูกต้อง`
+> เพราะฝั่ง API ยังตรวจ token ด้วย secret key เก่า
+
+> อย่าเปิด `npm run dev` ซ้อนกันสองหน้าต่าง — ตัวที่สองจะไปเกาะ port 5174/8789
+> แล้วเบราว์เซอร์อาจคุยกับชุดที่ใช้ env เก่า ให้ `Get-NetTCPConnection -LocalPort 5173,8788` เช็คก่อน
+
 ---
 
 ## 7. API
