@@ -121,7 +121,7 @@ approve_pillbox_request(p_request_id uuid, p_user_id text)
 
 | V1 (Netlify) | V2 (Pages) | เปลี่ยนอะไร |
 | --- | --- | --- |
-| `GET /.netlify/functions/dashboard` → `/api/dashboard` | `GET /api/dashboard` | เพิ่ม `files`, ตรวจเจ้าของด้วย join |
+| `GET /.netlify/functions/dashboard` | `GET /api/dashboard` | เพิ่ม `files`, ตรวจเจ้าของด้วย join |
 | `/api/create-patient` | เดิม | ใช้ `owner_id` = Clerk id |
 | `/api/update-patient` (PATCH) | เดิม | ตรวจ `owner_id` ใน `where` |
 | `/api/archive-patient` | เดิม | เดิม |

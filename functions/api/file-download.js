@@ -32,14 +32,14 @@ export const onRequestGet = route(async ({ request, env }) => {
   const object = await env.FILES.get(file.object_key);
   if (!object) throw new HttpError(404, 'ไม่พบไฟล์ในพื้นที่จัดเก็บ อาจถูกลบไปแล้ว');
 
-  return new Response(object.body, {
-    status: 200,
-    headers: {
-      'Content-Type': file.content_type || 'application/octet-stream',
-      'Content-Length': String(object.size ?? file.size_bytes ?? ''),
-      'Content-Disposition': contentDisposition(file.file_name),
-      'Cache-Control': 'private, no-store',
-      'X-Content-Type-Options': 'nosniff',
-    },
-  });
+  const size = Number(object.size ?? file.size_bytes);
+  const headers = {
+    'Content-Type': file.content_type || 'application/octet-stream',
+    'Content-Disposition': contentDisposition(file.file_name),
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+  };
+  if (Number.isFinite(size) && size > 0) headers['Content-Length'] = String(size);
+
+  return new Response(object.body, { status: 200, headers });
 });
