@@ -1,0 +1,14 @@
+name = "geowrisx-ad-v2"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = "dist"
+
+# All secrets and per-environment values live in the Cloudflare Pages dashboard
+# (Settings -> Variables and Secrets) or in .dev.vars for local development.
+# Do not add a [vars] block here: dashboard values should stay authoritative.
+
+# Cloudflare R2 bucket used for patient attachments.
+# Create it once with: npx wrangler r2 bucket create geowrisx-ad-v2-files
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "geowrisx-ad-v2-files"

@@ -1,0 +1,26 @@
+# Server-side variables for Cloudflare Pages Functions.
+# Copy to .dev.vars for local development. Never commit real secrets.
+
+# Neon Postgres pooled connection string (sslmode=require).
+NEON_DATABASE_URL=postgresql://user:password@ep-xxx-pooler.region.aws.neon.tech/neondb?sslmode=require
+
+# Clerk server keys. CLERK_SECRET_KEY is used for token verification (JWKS fetch)
+# and for reading caregiver email addresses from the Clerk Backend API.
+CLERK_SECRET_KEY=sk_test_REPLACE_ME
+# Optional: networkless JWT verification with the PEM public key from Clerk.
+# CLERK_JWT_KEY="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
+# Comma-separated allowlist of frontend origins that may call the API.
+CLERK_AUTHORIZED_PARTIES=http://localhost:5173,http://localhost:8788
+
+# Resend transactional email. Create an API key and verify your sending domain.
+RESEND_API_KEY=re_REPLACE_ME
+RESEND_FROM=GeoWrisX AD <alerts@example.com>
+# Optional: send all alert notifications here instead of the patient owner.
+# ALERT_NOTIFY_TO=caregiver@example.com
+
+# Prototype device gateway shared secret.
+DEVICE_INGEST_SECRET=replace-with-a-long-random-secret
+
+# Extra browser origins allowed to call the API (comma separated).
+# Same-origin requests do not need this. Leave empty in production.
+ALLOWED_ORIGINS=
