@@ -10,8 +10,8 @@ pages_build_output_dir = "dist"
 # .dev.vars overrides these values locally (localhost origins / real sender).
 [vars]
 RESEND_FROM = "onboarding@resend.dev"
-ALLOWED_ORIGINS = "https://geowrisx-ad-v2.pages.dev"
-CLERK_AUTHORIZED_PARTIES = "https://geowrisx-ad-v2.pages.dev"
+ALLOWED_ORIGINS = "https://geowrisx-ad-v2.pages.dev,https://geowrisxad.is-a.dev"
+CLERK_AUTHORIZED_PARTIES = "https://geowrisx-ad-v2.pages.dev,https://geowrisxad.is-a.dev"
 
 # Patient attachments are stored in Cloudflare Workers KV (free plan, no card).
 # Created once with: npx wrangler kv namespace create FILES

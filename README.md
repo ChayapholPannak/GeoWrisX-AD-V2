@@ -196,6 +196,30 @@ npx wrangler pages deploy dist --project-name geowrisx-ad-v2
 หรือใช้ GitHub Actions แบบ manual: `.github/workflows/deploy.yml`
 (ต้องตั้ง secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
 
+### 5.6 Custom domain — geowrisxad.is-a.dev
+
+โดเมนหลักของโปรเจกต์โดยใช้โดเมนฟรีจาก is-a.dev (ทำผ่าน pull request ไปที่
+[is-a-dev/register](https://github.com/is-a-dev/register)):
+
+1. สร้างไฟล์ `domains/geowrisxad.json` ตามไกด์ทางการแล้วรอการ merge:
+
+   ```json
+   { "owner": { "username": "..." }, "records": { "CNAME": "geowrisx-ad-v2.pages.dev" } }
+   ```
+
+2. เมื่อ merge แล้ว DNS จะขึ้นภายในไม่กี่นาที — is-a.dev อยู่ใน Public Suffix List
+   จึงต้องลงทะเบียนโดเมนกับ Pages **ผ่าน API** (หน้า dashboards ปกติจะใช้ไม่ได้):
+
+   ```powershell
+   Invoke-RestMethod -Uri "https://api.cloudflare.com/client/v4/accounts/<account_id>/pages/projects/geowrisx-ad-v2/domains" `
+     -Method Post -Headers @{ Authorization = "Bearer <token>" } `
+     -ContentType "application/json" -Body '{"name": "geowrisxad.is-a.dev"}'
+   ```
+
+3. เพิ่ม `https://geowrisxad.is-a.dev` ลงใน `ALLOWED_ORIGINS` และ
+   `CLERK_AUTHORIZED_PARTIES` (กำหนดไว้ใน `wrangler.toml` `[vars]` แล้ว)
+   และใน Clerk Dashboard → Development instance → Allowed origins
+
 ---
 
 ## 6. รันในเครื่อง
