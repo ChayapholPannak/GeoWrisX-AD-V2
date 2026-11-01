@@ -3,9 +3,15 @@ compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "dist"
 
-# All secrets and per-environment values live in the Cloudflare Pages dashboard
+# Secrets and per-environment values live in the Cloudflare Pages dashboard
 # (Settings -> Variables and Secrets) or in .dev.vars for local development.
-# Do not add a [vars] block here: dashboard values should stay authoritative.
+# Hint: plain-text vars added only through the Pages API did not reach the
+# production runtime, so the non-secret defaults live here as a fallback.
+# .dev.vars overrides these values locally (localhost origins / real sender).
+[vars]
+RESEND_FROM = "onboarding@resend.dev"
+ALLOWED_ORIGINS = "https://geowrisx-ad-v2.pages.dev"
+CLERK_AUTHORIZED_PARTIES = "https://geowrisx-ad-v2.pages.dev"
 
 # Patient attachments are stored in Cloudflare Workers KV (free plan, no card).
 # Created once with: npx wrangler kv namespace create FILES
