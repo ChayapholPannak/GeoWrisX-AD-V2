@@ -1,7 +1,7 @@
-# GeoWrisX AD — V2
+﻿# GeoWrisX AD — V2
 
 แดชบอร์ดผู้ดูแล (caregiver console) สำหรับต้นแบบ GeoWrisX AD ย้ายจาก **Netlify + Supabase**
-มาอยู่บน **Cloudflare Pages + Neon Postgres + Clerk + Resend + Cloudflare R2**
+มาอยู่บน **Cloudflare Pages + Neon Postgres + Clerk + Resend + Cloudflare KV**
 
 > V2 นี้เป็นโปรเจกต์ใหม่ (`GeoWrisX-AD-V2`) ไม่ได้แก้ไข repository เดิม
 > โค้ดแอปอยู่ในรากของ repository (ไม่มีโฟลเดอร์ `geowrisx-web/` แล้ว)
@@ -16,7 +16,7 @@
 | Database | Neon Postgres | เชื่อมผ่าน HTTP driver `@neondatabase/serverless` |
 | Auth | Clerk | `@clerk/react` ฝั่งเว็บ + `@clerk/backend` ตรวจ token ฝั่งเซิร์ฟเวอร์ |
 | Email | Resend | แจ้งเตือนเหตุการณ์และคำขอเปิดกล่องยา (best effort) |
-| Storage | Cloudflare R2 | ไฟล์แนบผู้ป่วย สูงสุด 25 MB/ไฟล์ |
+| Storage | Cloudflare KV | ไฟล์แนบผู้ป่วย สูงสุด 25 MB/ไฟล์ (แผนฟรี 1 GB) |
 | Frontend | React 19 + Vite 7 + Tailwind CSS v4 | UI ภาษาไทย |
 
 ---
@@ -32,7 +32,7 @@ Cloudflare Pages Functions  /api/*
    ├─ _lib/auth.js        verifyToken() → Clerk user id (user_...)
    ├─ _lib/db.js          Neon HTTP driver (parameterised SQL)
    ├─ _lib/email.js       Resend REST API
-   └─ R2 binding FILES    env.FILES.put/get/delete
+   └─ KV binding FILES     env.FILES.put/get/delete
         │
         ├── Neon Postgres   (patients, devices, alerts, approvals, …)
         ├── Clerk Backend   (อ่านอีเมลผู้ดูแลเมื่อต้องส่งอีเมล)
@@ -61,8 +61,8 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 │  ├─ caregiver-profile.js    GET / PUT
 │  ├─ approve-pillbox.js      POST
 │  ├─ device-event.js         POST (device gateway, shared secret)
-│  ├─ files.js                GET / POST / DELETE (R2)
-│  ├─ file-download.js        GET (stream จาก R2)
+│  ├─ files.js                GET / POST / DELETE (KV)
+│  ├─ file-download.js        GET (ดาวน์โหลดจาก KV)
 │  └─ health.js               GET (readiness probe)
 ├─ src/
 │  ├─ App.jsx                 หน้าจอผู้ดูแลทั้งหมด
@@ -72,7 +72,7 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 │  └─ index.css
 ├─ db/schema.sql              ตาราง + ฟังก์ชัน approve_pillbox_request
 ├─ db/seed.dev.sql            ข้อมูลตัวอย่างสำหรับ branch dev
-├─ wrangler.toml              Pages config + R2 binding
+├─ wrangler.toml              Pages config + KV binding
 ├─ .env.example               ตัวแปรฝั่งเบราว์เซอร์
 ├─ .dev.vars.example          ตัวแปรฝั่งเซิร์ฟเวอร์ (local)
 └─ docs/MIGRATION.md          สรุปการย้ายจาก V1
@@ -82,7 +82,7 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 
 ## 4. สิ่งที่ต้องเตรียม
 
-1. บัญชี **Cloudflare** (Pages + R2)
+1. บัญชี **Cloudflare** (Pages + KV — แผนฟรี ไม่ต้องใส่บัตร)
 2. โปรเจกต์ **Neon** (สร้างได้ที่ https://console.neon.tech)
 3. แอป **Clerk** (สร้างได้ที่ https://dashboard.clerk.com)
 4. บัญชี **Resend** + โดเมนที่ยืนยันแล้ว (หรือใช้ `onboarding@resend.dev` สำหรับทดลอง)
@@ -133,15 +133,15 @@ Supabase RLS แบบ `auth.uid()` ใช้ไม่ได้แล้ว เ�
 4. ตั้งค่า sign-in methods ตามต้องการ (email + password, Google, OTP ฯลฯ)
    หน้า sign-in ใช้ `<SignIn routing="hash" />` จึงไม่ต้องตั้ง path เพิ่มเติม
 
-### 5.3 Cloudflare R2
+### 5.3 Cloudflare KV (พื้นที่เก็บไฟล์แนบ)
 
 ```powershell
 npx wrangler login
-npx wrangler r2 bucket create geowrisx-ad-v2-files
+npx wrangler kv namespace create FILES
 ```
 
-`wrangler.toml` ผูก bucket นี้เป็น binding ชื่อ `FILES` ให้แล้ว
-ถ้าใช้ชื่อ bucket อื่น ให้แก้ `bucket_name` ให้ตรงกัน
+คัดลอก `id` ที่คำสั่งพิมพ์ออกมา แล้วใส่ใน `wrangler.toml` (ผูกเป็น binding ชื่อ `FILES`)
+ลิมิตฟรี: 1 GB รวม, ค่าเดียวสูงสุด 25 MB (ตรงกับลิมิตอัปโหลด), ไม่มีค่าใช้จ่าย
 
 ### 5.4 Resend
 
@@ -181,8 +181,8 @@ npx wrangler r2 bucket create geowrisx-ad-v2-files
 5. Save and Deploy
 6. เปิด `https://<project>.pages.dev/api/health` ต้องได้ `{"ok":true,...}`
 
-> R2 binding ถูกอ่านจาก `wrangler.toml` ตอน deploy ผ่าน Git เช่นกัน
-> ถ้า dashboard ไม่แสดง binding ให้เพิ่มที่ Settings → Functions → R2 bucket bindings
+> KV binding ถูกอ่านจาก `wrangler.toml` ตอน deploy ผ่าน Git เช่นกัน
+> ถ้า dashboard ไม่แสดง binding ให้เพิ่มที่ Settings → Functions → KV namespace bindings
 > (Variable name: `FILES`)
 
 **ทางเลือก — deploy จากเครื่อง**
@@ -217,7 +217,7 @@ npm run dev
 `npm run dev` จะ build แล้วเปิด
 
 - Vite ที่ http://localhost:5173 (หน้าเว็บ)
-- `wrangler pages dev dist --port 8788` (API + R2 local)
+- `wrangler pages dev dist --port 8788` (API + KV local)
 - Vite proxy `/api` → `127.0.0.1:8788` ให้เรียก API ได้แบบ same-origin
 
 คำสั่งแยก:
@@ -228,7 +228,7 @@ npm run dev:api   # เฉพาะ Pages Functions (ต้อง build ก่�
 npm run build
 ```
 
-> ครั้งแรกที่ `wrangler pages dev` ทำงาน อาจใช้เวลาสร้าง local R2 state สักครู่
+> ครั้งแรกที่ `wrangler pages dev` ทำงาน อาจใช้เวลาสร้าง local KV state สักครู่
 > ถ้าเจอ `Unable to connect` ให้รอจนขึ้น `Ready on http://127.0.0.1:8788`
 
 > **สำคัญ:** `wrangler pages dev` อ่าน `.dev.vars` ตอนเริ่มเท่านั้น ถ้าแก้ key
@@ -249,7 +249,7 @@ npm run build
 
 | Method | Path | หน้าที่ |
 | --- | --- | --- |
-| GET | `/api/health` | ตรวจ env/DB/R2 (ไม่ต้อง auth) |
+| GET | `/api/health` | ตรวจ env/DB/Storage (ไม่ต้อง auth) |
 | GET | `/api/dashboard` | patients, devices, alerts, approvals, commands, files |
 | POST | `/api/create-patient` | เพิ่มผู้ป่วย |
 | PATCH | `/api/update-patient` | แก้ไขผู้ป่วย |
@@ -260,7 +260,7 @@ npm run build
 | GET | `/api/files?patient_id=` | รายการไฟล์ของผู้ป่วย |
 | POST | `/api/files` | อัปโหลด (`multipart/form-data`: `patient_id`, `file`) |
 | DELETE | `/api/files?file_id=` | ลบไฟล์ |
-| GET | `/api/file-download?file_id=` | ดาวน์โหลดไฟล์ (stream จาก R2) |
+| GET | `/api/file-download?file_id=` | ดาวน์โหลดไฟล์ (จาก KV) |
 | POST | `/api/device-event` | gateway ของอุปกรณ์ (shared secret) |
 
 ### ตัวอย่าง device gateway
@@ -325,7 +325,7 @@ values ('<patient uuid>', 'wristband', 'Wristband A-01');
 | 401 ทุกครั้ง | token หมดอายุ, `CLERK_AUTHORIZED_PARTIES` ไม่ตรง origin, หรือใช้ key คนละ environment |
 | 500 `NEON_DATABASE_URL` | ยังไม่ได้ใส่ secret หรือใส่ใน Pages แบบ Preview ไม่ครบ |
 | 500 ตอนโหลด dashboard | ยังไม่ได้รัน `db/schema.sql` หรือชื่อ schema/ตารางไม่ตรง |
-| อัปโหลดไฟล์ไม่ผ่าน | ใหญ่เกิน 25 MB, binding `FILES` ไม่มี, หรือไม่ได้สร้าง R2 bucket |
+| อัปโหลดไฟล์ไม่ผ่าน | ใหญ่เกิน 25 MB, binding `FILES` ไม่มี, หรือไม่ได้สร้าง KV namespace |
 | ไม่ได้รับอีเมล | ยังไม่ยืนยันโดเมนใน Resend, `RESEND_FROM` ไม่ถูกต้อง, หรือไม่มีอีเมลผู้ใช้ใน Clerk |
 | `Unable to connect` ตอน dev | รอให้ wrangler ขึ้น `Ready` ก่อน แล้วค่อยเปิด 5173 |
 
@@ -339,5 +339,5 @@ values ('<patient uuid>', 'wristband', 'Wristband A-01');
 - Supabase Auth → Clerk (`owner_id`/`user_id` เปลี่ยนจาก uuid เป็น text `user_...`)
 - Supabase Postgres + RLS → Neon + การตรวจสิทธิ์ใน API
 - Netlify Functions (`.mjs`) → Cloudflare Pages Functions (`functions/api/*.js`)
-- Supabase Storage → Cloudflare R2 (`FILES`)
+- Supabase Storage → Cloudflare KV (`FILES`)
 - ไม่มี Netlify/Supabase package หรือ env var เหลืออยู่ในโค้ด V2

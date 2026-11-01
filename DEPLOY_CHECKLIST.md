@@ -40,12 +40,12 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - [ ] (แนะนำ) เปิด MFA สำหรับบัญชีผู้ดูแลจริง
 - [ ] (ถ้าใช้) คัดลอก PEM public key มาเป็น `CLERK_JWT_KEY` เพื่อเลี่ยง JWKS fetch
 
-## D. R2
+## D. Cloudflare KV
 
-- [ ] `npx wrangler r2 bucket create geowrisx-ad-v2-files`
-- [ ] ชื่อ bucket ตรงกับ `wrangler.toml` (`[[r2_buckets]]` binding `FILES`)
-- [ ] ถ้าใช้ชื่ออื่น: แก้ `bucket_name` และ/หรือเพิ่ม binding ใน Pages dashboard
-      (Variable name: `FILES`)
+- [ ] `npx wrangler kv namespace create FILES`
+- [ ] คัดลอก `id` ที่ได้ ไปใส่ใน `wrangler.toml` (`[[kv_namespaces]]` binding `FILES`)
+- [ ] ถ้าใช้ namespace อื่น: แก้ `id` และ/หรือเพิ่ม binding ใน Pages dashboard
+      (Settings → Functions → KV namespace bindings, Variable name: `FILES`)
 
 ## E. Resend
 
@@ -73,7 +73,7 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
   - [ ] `ALLOWED_ORIGINS` (ไม่บังคับ)
 
 - [ ] Deploy สำเร็จ (build log ไม่มี error)
-- [ ] R2 binding `FILES` ปรากฏใน Settings → Functions
+- [ ] KV binding `FILES` ปรากฏใน Settings → Functions → KV namespace bindings
 
 ## G. ตรวจหลัง deploy
 
@@ -83,7 +83,7 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - [ ] บันทึกโปรไฟล์ผู้ดูแล → รีเฟรชแล้วค่าอยู่
 - [ ] เพิ่มผู้ป่วย → แก้ไข → เก็บเข้าคลัง → กู้คืน
 - [ ] อัปโหลดไฟล์แนบ → ดาวน์โหลด → ลบ
-- [ ] ตรวจ R2 ว่ามี object ภายใต้ `patient-files/<patient uuid>/...`
+- [ ] ตรวจ KV ว่ามี key ภายใต้ `patient-files/<patient uuid>/...` (Dashboard → KV)
 - [ ] ส่ง `DEVICE_STATUS` จาก gateway → สถานะ/แบตเตอรี่เปลี่ยน
 - [ ] ส่ง `TAMPER` → มี alert + อีเมล (ถ้าตั้ง Resend)
 - [ ] ส่ง `PILLBOX_REQUEST` ด้วย `ble_proximity_verified: true` → อนุมัติได้

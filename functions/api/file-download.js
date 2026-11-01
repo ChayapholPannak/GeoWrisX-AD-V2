@@ -9,7 +9,7 @@ function contentDisposition(fileName) {
   return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(fileName || 'download')}`;
 }
 
-/** GET /api/file-download?file_id=<uuid> — streams the R2 object to its owner. */
+/** GET /api/file-download?file_id=<uuid> — serves the stored object to its owner. */
 export const onRequestGet = route(async ({ request, env }) => {
   const { userId } = await authenticate(request, env);
   const fileId = requireUuid(
@@ -27,12 +27,12 @@ export const onRequestGet = route(async ({ request, env }) => {
     [fileId, userId],
   );
   if (!file) throw new HttpError(404, 'ไม่พบไฟล์หรือคุณไม่มีสิทธิ์ดาวน์โหลดไฟล์นี้');
-  if (!env.FILES) throw new HttpError(500, 'เซิร์ฟเวอร์ยังไม่ได้ผูก R2 bucket ชื่อ FILES');
+  if (!env.FILES) throw new HttpError(500, 'เซิร์ฟเวอร์ยังไม่ได้ผูก KV namespace ชื่อ FILES');
 
-  const object = await env.FILES.get(file.object_key);
-  if (!object) throw new HttpError(404, 'ไม่พบไฟล์ในพื้นที่จัดเก็บ อาจถูกลบไปแล้ว');
+  const bytes = await env.FILES.get(file.object_key, { type: 'arrayBuffer' });
+  if (!bytes) throw new HttpError(404, 'ไม่พบไฟล์ในพื้นที่จัดเก็บ อาจถูกลบไปแล้ว');
 
-  const size = Number(object.size ?? file.size_bytes);
+  const size = bytes.byteLength || file.size_bytes;
   const headers = {
     'Content-Type': file.content_type || 'application/octet-stream',
     'Content-Disposition': contentDisposition(file.file_name),
@@ -41,5 +41,5 @@ export const onRequestGet = route(async ({ request, env }) => {
   };
   if (Number.isFinite(size) && size > 0) headers['Content-Length'] = String(size);
 
-  return new Response(object.body, { status: 200, headers });
+  return new Response(bytes, { status: 200, headers });
 });

@@ -13,7 +13,7 @@
 | Database | Supabase Postgres + RLS | Neon Postgres (HTTP driver) |
 | Auth | Supabase Auth (email/password) | Clerk (`<SignIn routing="hash">`) |
 | สิทธิ์ข้อมูล | RLS + `auth.uid()` | ตรวจ `owner_id = $clerkUserId` ในทุก query |
-| Storage | Supabase Storage (ไม่มีใน V1) | Cloudflare R2 binding `FILES` |
+| Storage | Supabase Storage (ไม่มีใน V1) | Cloudflare KV binding `FILES` |
 | Email | ไม่มี | Resend |
 | Frontend | React 19 + Vite 6 | React 19 + Vite 7 |
 | Auth package | `@supabase/supabase-js` | `@clerk/react`, `@clerk/backend`, `@clerk/localizations` |
@@ -127,9 +127,9 @@ approve_pillbox_request(p_request_id uuid, p_user_id text)
 | `/api/archive-patient` | เดิม | เดิม |
 | `/api/caregiver-profile` GET/PUT | เดิม | อีเมลอ่านจาก Clerk แทน `auth.users` |
 | `/api/approve-pillbox` | เดิม | ส่ง `p_user_id` เข้า RPC |
-| `/api/device-event` | เดิม | ใช้ Neon + R2-free; `timingSafeEqual` → SHA-256 compare |
-| — | `GET/POST/DELETE /api/files` | ใหม่ (R2) |
-| — | `GET /api/file-download` | ใหม่ (R2) |
+| `/api/device-event` | เดิม | ใช้ Neon + เก็บอีเมลผ่าน Clerk; `timingSafeEqual` → SHA-256 compare |
+| — | `GET/POST/DELETE /api/files` | ใหม่ (KV) |
+| — | `GET /api/file-download` | ใหม่ (KV) |
 | — | `GET /api/health` | ใหม่ |
 
 ---
@@ -166,7 +166,7 @@ approve_pillbox_request(p_request_id uuid, p_user_id text)
    select count(*) from public.patients where owner_id !~ '^user_';
    ```
 
-6. ไฟล์แนบ: V1 ไม่มี storage จึงไม่มีอะไรต้องย้าย (ถ้ามี bucket เดิมให้ดาวน์โหลด
+6. ไฟล์แนบ: V1 ไม่มี storage จึงไม่มีอะไรต้องย้าย (ถ้ามีไฟล์เดิมจาก storage อื่นให้ดาวน์โหลด
    แล้วอัปโหลดใหม่ผ่าน UI)
 
 ---

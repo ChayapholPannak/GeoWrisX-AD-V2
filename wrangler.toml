@@ -7,8 +7,9 @@ pages_build_output_dir = "dist"
 # (Settings -> Variables and Secrets) or in .dev.vars for local development.
 # Do not add a [vars] block here: dashboard values should stay authoritative.
 
-# Cloudflare R2 bucket used for patient attachments.
-# Create it once with: npx wrangler r2 bucket create geowrisx-ad-v2-files
-[[r2_buckets]]
+# Patient attachments are stored in Cloudflare Workers KV (free plan, no card).
+# Created once with: npx wrangler kv namespace create FILES
+# Free limits: 1 GB total, single value up to 25 MB (matches MAX_UPLOAD_BYTES).
+[[kv_namespaces]]
 binding = "FILES"
-bucket_name = "geowrisx-ad-v2-files"
+id = "04cb4173d3f44a5a87137d052e10cfb4"

@@ -6,7 +6,7 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 function bucket(env) {
   if (!env.FILES) {
-    throw new HttpError(500, 'เซิร์ฟเวอร์ยังไม่ได้ผูก R2 bucket ชื่อ FILES');
+    throw new HttpError(500, 'เซิร์ฟเวอร์ยังไม่ได้ผูก KV namespace ชื่อ FILES');
   }
   return env.FILES;
 }
@@ -85,16 +85,12 @@ export const onRequestPost = route(async ({ request, env }) => {
   const objectKey = `patient-files/${patientId}/${crypto.randomUUID()}`;
   const storage = bucket(env);
 
-  await storage.put(objectKey, file, {
-    httpMetadata: { contentType },
-    customMetadata: {
-      ownerId: userId,
-      patientId,
-      originalName: encodeURIComponent(fileName),
-    },
-  });
+  // KV stores the raw bytes only; file_name/content_type already live in
+  // public.patient_files so no value-metadata is needed.
+  const bytes = await file.arrayBuffer();
 
   try {
+    await storage.put(objectKey, bytes);
     const created = await queryOne(
       env,
       `insert into public.patient_files
