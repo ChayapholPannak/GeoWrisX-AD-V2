@@ -149,6 +149,9 @@ npx wrangler kv namespace create FILES
 2. สร้าง API key
 3. ตั้ง `RESEND_FROM` เป็นผู้ส่งที่ยืนยันแล้ว เช่น `GeoWrisX AD <alerts@your-domain.com>`
    - ทดลองเร็ว ๆ ใช้ `GeoWrisX AD <onboarding@resend.dev>` ได้ แต่ส่งได้เฉพาะอีเมลเจ้าของบัญชี Resend
+4. **ตั้งค่าผู้รับแจ้งเตือน (ตัวเลือก):** ตัวแปร `ALERT_NOTIFY_TO` ใน Pages env vars
+   จะบังคับให้ทุกอีเมลแจ้งเตือนไปหาที่อยู่นั้นทันที (ไม่ต้อง lookup อีเมลผู้ดูแลจาก Clerk)
+   ถ้าไม่ตั้ง ระบบจะใช้อีเมลของเจ้าของผู้ป่วย (จาก Clerk) เป็นผู้รับตามตัวเอง — ค่า default ที่ใช้อยู่
 
 ### 5.5 Cloudflare Pages
 
@@ -196,29 +199,19 @@ npx wrangler pages deploy dist --project-name geowrisx-ad-v2
 หรือใช้ GitHub Actions แบบ manual: `.github/workflows/deploy.yml`
 (ต้องตั้ง secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`)
 
-### 5.6 Custom domain — geowrisxad.is-a.dev
+### 5.6 Custom domain — สถานะสุดท้าย
 
-โดเมนหลักของโปรเจกต์โดยใช้โดเมนฟรีจาก is-a.dev (ทำผ่าน pull request ไปที่
-[is-a-dev/register](https://github.com/is-a-dev/register)):
+**เว็บใช้โดเมนฟรีในตัวของ Cloudflare Pages: `https://geowrisx-ad-v2.pages.dev`
+และไม่มีแผนใช้โดเมนภายนอกเพิ่ม** (ตัดสินใจเมื่อ 2 พ.ย. 2569)
 
-1. สร้างไฟล์ `domains/geowrisxad.json` ตามไกด์ทางการแล้วรอการ merge:
+- is-a.dev ถูกปฏิเสธ (PR [is-a-dev/register#59504](https://github.com/is-a-dev/register/pull/59504)
+  ถูกปิดเพราะเนื้อหาไม่ตรงเงื่อนไข "software development" ของพวกเขา)
+- deSEC/eu.org ถูกยกเลิกตามความเห็นชอบของเจ้าของโปรเจกต์ — เพราะ URL ฟรีของ
+  Pages ใช้งานได้ครบทุกฟีเจอร์แล้ว (Clerk dev instance ก็ทำงานร่วมได้ตามปกติ)
 
-   ```json
-   { "owner": { "username": "..." }, "records": { "CNAME": "geowrisx-ad-v2.pages.dev" } }
-   ```
-
-2. เมื่อ merge แล้ว DNS จะขึ้นภายในไม่กี่นาที — is-a.dev อยู่ใน Public Suffix List
-   จึงต้องลงทะเบียนโดเมนกับ Pages **ผ่าน API** (หน้า dashboards ปกติจะใช้ไม่ได้):
-
-   ```powershell
-   Invoke-RestMethod -Uri "https://api.cloudflare.com/client/v4/accounts/<account_id>/pages/projects/geowrisx-ad-v2/domains" `
-     -Method Post -Headers @{ Authorization = "Bearer <token>" } `
-     -ContentType "application/json" -Body '{"name": "geowrisxad.is-a.dev"}'
-   ```
-
-3. เพิ่ม `https://geowrisxad.is-a.dev` ลงใน `ALLOWED_ORIGINS` และ
-   `CLERK_AUTHORIZED_PARTIES` (กำหนดไว้ใน `wrangler.toml` `[vars]` แล้ว)
-   และใน Clerk Dashboard → Development instance → Allowed origins
+ถ้าอนาคตต้องการโดเมนจริงเพิ่ม ให้ทำตามขั้นตอน Standard: ซื้อโดเมน → เพิ่มโซนใน
+Cloudflare → Custom domain ในหน้า Pages dashboard → อัปเดต `ALLOWED_ORIGINS` /
+`CLERK_AUTHORIZED_PARTIES` ใน `wrangler.toml` และ Clerk Dashboard → redeploy
 
 ---
 
@@ -285,7 +278,7 @@ npm run build
 | POST | `/api/files` | อัปโหลด (`multipart/form-data`: `patient_id`, `file`) |
 | DELETE | `/api/files?file_id=` | ลบไฟล์ |
 | GET | `/api/file-download?file_id=` | ดาวน์โหลดไฟล์ (จาก KV) |
-| POST | `/api/device-event` | gateway ของอุปกรณ์ (shared secret) |
+| POST | `/api/device-event` | gateway ของอุปกรณ์ (shared secret + rate limit) |
 
 ### ตัวอย่าง device gateway
 
@@ -322,6 +315,32 @@ insert into public.devices (patient_id, device_type, device_name)
 values ('<patient uuid>', 'wristband', 'Wristband A-01');
 ```
 
+### Rate limit ของ gateway (KV แผนฟรี, best-effort)
+
+| เงื่อนไข | ลิมิต |
+| --- | --- |
+| ต่อ IP ทั้งหมด | 60 เหตุการณ์/นาที |
+| ต่ออุปกรณ์ | 30 เหตุการณ์/นาที |
+| `PILLBOX_REQUEST` ต่ออุปกรณ์ | 5 คำขอ/นาที (กันอีเมลล้น) |
+| ยิง secret ผิดต่อ IP | 20 ครั้ง/15 นาที → 429 |
+
+ขนาด request จำกัด 8 KiB; ตัวนับใช้ KV (eventual consistent) จึงเป็นเกราะ
+แบบ best-effort — บล็อก request ซ้ำรัว ๆ และ scanner ได้ตามจริง แต่ไม่ใช่
+การบังคับโควตาแบบเคร่งครัด ทดสอบซ้ำได้ด้วย `node scripts/test-rate-limit.mjs <device_id>`
+
+### สคริปต์ช่วยตรวจระบบ (scripts/)
+
+> ทุกสคริปต์อ่านค่า secret จาก `.dev.vars` เอง — ตั้ง `$env:NEON_DATABASE_URL`
+> เป็น connection string ของ **main** ก่อนรันคำสั่งที่แตะฐานข้อมูล pipeline หลัก
+
+| สคริปต์ | หน้าที่ |
+| --- | --- |
+| `scripts/seed-main-test.mjs` | ปลูกผู้ป่วย/สายรัด/กล่องยาทดสอบบน main (idempotent) |
+| `scripts/fire-device-events.mjs <wristband> <pillbox>` | ยิงเหตุการณ์ครบชุดเข้า prod |
+| `scripts/check-approval.mjs` | ตรวจ `pillbox_approvals` + `device_commands` ล่าสุด |
+| `scripts/test-rate-limit.mjs <device_id>` | ยิงรัวเพื่อยืนยัน 429 ของ gateway |
+| `scripts/archive-test-data.mjs` | เก็บชุดทดสอบเข้าคลัง (`--restore` เพื่อกู้ก่อนดีโม) |
+
 ---
 
 ## 8. ความปลอดภัยและข้อจำกัด
@@ -332,6 +351,8 @@ values ('<patient uuid>', 'wristband', 'Wristband A-01');
 - ไฟล์แนบถูกดาวน์โหลดเป็น `attachment` พร้อม `X-Content-Type-Options: nosniff`
   เพื่อลดความเสี่ยง XSS จากไฟล์ที่ผู้ใช้อัปโหลด
 - CORS จำกัดด้วย `ALLOWED_ORIGINS`; same-origin ไม่ต้องใช้
+- `/api/device-event` มี rate limit ต่อ IP/ต่ออุปกรณ์ ผ่าน KV namespace `RATE_LIMIT`
+  (fail-open ถ้า KV มีปัญหา — อุปกรณ์ไม่ควรติดขัดเพราะระบบสำรอง) ดูตารางใน §7
 - `DEVICE_INGEST_SECRET` เป็น shared secret ของต้นแบบเท่านั้น
   ก่อนใช้งานจริงควรเปลี่ยนเป็น per-device credential + signature + replay protection
 - การอนุมัติสร้าง **คำสั่งในคิว** (`device_commands`) ไม่ได้สั่งเปิดกลอนโดยตรง
