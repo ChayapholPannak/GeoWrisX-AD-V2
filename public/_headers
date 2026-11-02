@@ -1,0 +1,18 @@
+# Static hardening applied to every Pages asset response.
+# (The Pages Functions already set their own headers in _middleware.js.)
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+# Vite outputs content-hashed assets — cache them hard.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Never cache the SPA shell (users must get fresh builds immediately).
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/robots.txt
+  Cache-Control: public, max-age=86400

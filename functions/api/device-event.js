@@ -2,6 +2,7 @@ import { getClerkUser, secretsMatch } from './_lib/auth.js';
 import { query, queryOne } from './_lib/db.js';
 import { buildAlertEmail, buildPillboxRequestEmail, sendEmail } from './_lib/email.js';
 import { HttpError, json, readJson, requireUuid, route } from './_lib/http.js';
+import { enforceRateLimit } from './_lib/ratelimit.js';
 
 const ALLOWED_EVENTS = new Set([
   'GEOFENCE_EXIT',
@@ -36,11 +37,34 @@ async function notify(env, ownerId, builder, values) {
  * with per-device credentials and replay protection before real deployments.
  */
 export const onRequestPost = route(async ({ request, env, waitUntil }) => {
+  // Hard-cap request size: legitimate events are tiny JSON, never > 8 KiB.
+  const contentLength = Number(request.headers.get('Content-Length') || 0);
+  if (contentLength > 8192) {
+    throw new HttpError(413, 'ข้อมูลเหตุการณ์ใหญ่เกินที่อนุญาต');
+  }
+
+  const clientIp = request.headers.get('Cf-Connecting-Ip') || 'unknown';
+
   const expectedSecret = env.DEVICE_INGEST_SECRET;
   const suppliedSecret = request.headers.get('x-device-ingest-secret');
   if (!(await secretsMatch(suppliedSecret, expectedSecret))) {
+    // Brute-force guard: a handful of bad attempts per IP per 15 minutes.
+    await enforceRateLimit(env, {
+      key: `auth-fail:${clientIp}`,
+      limit: 20,
+      windowSeconds: 15 * 60,
+      message: 'อัตราการลองเชื่อมต่อสูงผิดปกติ ถูกชะลอชั่วคราว',
+    });
     throw new HttpError(401, 'อุปกรณ์ไม่ได้รับอนุญาต');
   }
+
+  // Firmware sanity cap per source IP: far above any real cadence, catches runaway loops.
+  await enforceRateLimit(env, {
+    key: `ingest-ip:${clientIp}`,
+    limit: 60,
+    windowSeconds: 60,
+    message: 'ยอดเหตุการณ์จากอุปกรณ์เกินโควตาชั่วคราว',
+  });
 
   const body = await readJson(request);
   if (!ALLOWED_EVENTS.has(body.event_type)) {
@@ -59,6 +83,14 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
     [deviceId],
   );
   if (!device) throw new HttpError(404, 'ไม่พบอุปกรณ์');
+
+  // Per-device quota (in addition to the per-IP one above).
+  await enforceRateLimit(env, {
+    key: `device:${device.id}`,
+    limit: 30,
+    windowSeconds: 60,
+    message: 'ยอดเหตุการณ์จากอุปกรณ์นี้เกินโควตาชั่วคราว',
+  });
 
   if (body.event_type === 'DEVICE_STATUS') {
     const battery = Number(body.battery_percent);
@@ -80,6 +112,14 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
     if (!Number.isInteger(compartment) || compartment < 1 || compartment > 3) {
       throw new HttpError(400, 'compartment_no ต้องอยู่ระหว่าง 1–3');
     }
+
+    // Each request emails the caregiver — keep the mail queue from filling up.
+    await enforceRateLimit(env, {
+      key: `pillbox-req:${device.id}`,
+      limit: 5,
+      windowSeconds: 60,
+      message: 'คำขอเปิดกล่องยาจากอุปกรณ์นี้ถี่เกินไป',
+    });
 
     // Firmware must set this true only after the pillbox verifies the wristband over BLE.
     const bleVerified = body.ble_proximity_verified === true;

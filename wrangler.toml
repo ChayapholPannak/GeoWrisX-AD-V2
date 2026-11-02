@@ -10,12 +10,19 @@ pages_build_output_dir = "dist"
 # .dev.vars overrides these values locally (localhost origins / real sender).
 [vars]
 RESEND_FROM = "onboarding@resend.dev"
-ALLOWED_ORIGINS = "https://geowrisx-ad-v2.pages.dev,https://geowrisxad.is-a.dev"
-CLERK_AUTHORIZED_PARTIES = "https://geowrisx-ad-v2.pages.dev,https://geowrisxad.is-a.dev"
+ALLOWED_ORIGINS = "https://geowrisx-ad-v2.pages.dev"
+CLERK_AUTHORIZED_PARTIES = "https://geowrisx-ad-v2.pages.dev"
 
+# Rate limiting for the public device-event gateway (free plan, no card).
+# Created once with: npx wrangler kv namespace create RATE_LIMIT
+# NOTE: the is-a.dev subdomain was never assigned (registration was declined),
+# so only the native pages.dev origin is allowed.
 # Patient attachments are stored in Cloudflare Workers KV (free plan, no card).
-# Created once with: npx wrangler kv namespace create FILES
 # Free limits: 1 GB total, single value up to 25 MB (matches MAX_UPLOAD_BYTES).
 [[kv_namespaces]]
 binding = "FILES"
 id = "04cb4173d3f44a5a87137d052e10cfb4"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "4dbac5d552214b09a796c065886e4d93"
