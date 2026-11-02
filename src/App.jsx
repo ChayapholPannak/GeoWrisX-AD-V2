@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
-  Clock3, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
-  Pencil, Plus, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2, UserRound, Watch,
+  Clock3, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
+  Pencil, Plus, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2, UserRound, Users, Watch,
   X, XCircle,
 } from 'lucide-react';
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
@@ -120,7 +120,12 @@ function statusLabel(status) {
   return 'ยังไม่ทราบสถานะ';
 }
 
-function PatientFiles({ files, uploading, downloadingId, deletingId, onUpload, onDownload, onDelete }) {
+/** Copy-link invite URL: the token rides in the ?invite= query parameter. */
+function inviteLink(token) {
+  return `${window.location.origin}${window.location.pathname}?invite=${encodeURIComponent(token)}`;
+}
+
+function PatientFiles({ files, canManage = false, uploading, downloadingId, deletingId, onUpload, onDownload, onDelete }) {
   return (
     <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -128,20 +133,24 @@ function PatientFiles({ files, uploading, downloadingId, deletingId, onUpload, o
           <Paperclip size={13} /> ไฟล์แนบผู้ป่วย
           <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{files.length}</span>
         </div>
-        <label className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
-          {uploading ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
-          {uploading ? 'กำลังอัปโหลด…' : 'อัปโหลดไฟล์'}
-          <input
-            type="file"
-            className="hidden"
-            disabled={uploading}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = '';
-              if (file) onUpload(file);
-            }}
-          />
-        </label>
+        {canManage ? (
+          <label className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
+            {uploading ? <RefreshCw size={13} className="animate-spin" /> : <Plus size={13} />}
+            {uploading ? 'กำลังอัปโหลด…' : 'อัปโหลดไฟล์'}
+            <input
+              type="file"
+              className="hidden"
+              disabled={uploading}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = '';
+                if (file) onUpload(file);
+              }}
+            />
+          </label>
+        ) : (
+          <span className="text-[10px] leading-4 text-slate-400">อัปโหลด/ลบได้เฉพาะเจ้าของหลัก</span>
+        )}
       </div>
 
       {files.length === 0 ? (
@@ -168,15 +177,17 @@ function PatientFiles({ files, uploading, downloadingId, deletingId, onUpload, o
               >
                 {downloadingId === file.id ? <RefreshCw size={13} className="animate-spin" /> : <Download size={13} />}
               </button>
-              <button
-                type="button"
-                aria-label={`ลบ ${file.file_name}`}
-                onClick={() => onDelete(file)}
-                disabled={deletingId === file.id}
-                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50"
-              >
-                {deletingId === file.id ? <RefreshCw size={13} className="animate-spin" /> : <Trash2 size={13} />}
-              </button>
+              {canManage && (
+                <button
+                  type="button"
+                  aria-label={`ลบ ${file.file_name}`}
+                  onClick={() => onDelete(file)}
+                  disabled={deletingId === file.id}
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-rose-600 hover:bg-rose-50"
+                >
+                  {deletingId === file.id ? <RefreshCw size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                </button>
+              )}
             </li>
           ))}
         </ul>
@@ -219,6 +230,25 @@ function Dashboard() {
   const [downloadingFileId, setDownloadingFileId] = useState('');
   const [deletingFileId, setDeletingFileId] = useState('');
 
+  // Multi-caregiver sharing
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [acceptingInviteId, setAcceptingInviteId] = useState('');
+  const [dismissedInvites, setDismissedInvites] = useState([]);
+  const [circleOpenId, setCircleOpenId] = useState('');
+  const [circleData, setCircleData] = useState(null);
+  const [circleLoading, setCircleLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviting, setInviting] = useState(false);
+  const [busyCircleAction, setBusyCircleAction] = useState('');
+  const [freshInvite, setFreshInvite] = useState(null);
+  const [urlInviteToken, setUrlInviteToken] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('invite') || '';
+    } catch {
+      return '';
+    }
+  });
+
   const requireToken = useCallback(async () => {
     const token = await getToken();
     if (!token) throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');
@@ -245,6 +275,18 @@ function Dashboard() {
   }, [authedRequest]);
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
+
+  const loadInvites = useCallback(async () => {
+    // Optional feature: a failed invite lookup must not break the dashboard.
+    try {
+      const result = await authedRequest('invites');
+      setPendingInvites(result.invites || []);
+    } catch {
+      setPendingInvites([]);
+    }
+  }, [authedRequest]);
+
+  useEffect(() => { loadInvites(); }, [loadInvites]);
 
   useEffect(() => {
     let active = true;
@@ -282,6 +324,8 @@ function Dashboard() {
   const unacknowledgedAlerts = data.alerts.filter((alert) => !alert.acknowledged_at).length;
   const pendingApprovals = data.approvals.filter((item) => item.status === 'pending').length;
   const displayName = caregiverProfile.full_name || user?.fullName || profileEmail || 'บัญชีผู้ดูแล';
+  const viewerId = data.viewer_user_id || user?.id || '';
+  const isOwnerOf = (patient) => Boolean(viewerId) && patient.owner_id === viewerId;
 
   async function addPatient(event) {
     event.preventDefault();
@@ -444,6 +488,122 @@ function Dashboard() {
     }
   }
 
+  // ---- Multi-caregiver sharing -----------------------------------------
+
+  async function loadCircle(patientId) {
+    setCircleLoading(true);
+    try {
+      const result = await authedRequest('caregivers', { query: { patient_id: patientId } });
+      setCircleData({ members: result.members || [], invites: result.invites || [] });
+    } catch (e) {
+      setCircleData({ error: e.message || 'โหลดทีมผู้ดูแลไม่สำเร็จ' });
+    } finally {
+      setCircleLoading(false);
+    }
+  }
+
+  function toggleCircle(patient) {
+    if (circleOpenId === patient.id) {
+      setCircleOpenId('');
+      setCircleData(null);
+      setFreshInvite(null);
+      return;
+    }
+    setCircleOpenId(patient.id);
+    setCircleData(null);
+    setFreshInvite(null);
+    setInviteEmail('');
+    loadCircle(patient.id);
+  }
+
+  async function createInvite(patientId) {
+    setInviting(true); setNotice(null);
+    try {
+      const result = await authedRequest('caregivers', {
+        method: 'POST',
+        body: { action: 'invite', patient_id: patientId, email: inviteEmail },
+      });
+      setFreshInvite({
+        patient_id: patientId,
+        token: result.invite.token,
+        email: result.invite.email,
+      });
+      setInviteEmail('');
+      setNotice({ kind: 'success', text: 'สร้างลิงก์เชิญแล้ว — กดคัดลอกแล้วส่งให้ผู้รับผ่านข้อความ' });
+      await loadCircle(patientId);
+    } catch (e) {
+      setNotice({ kind: 'error', text: e.message || 'สร้างคำเชิญไม่สำเร็จ' });
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function revokeCaregiverInvite(patientId, inviteId) {
+    setBusyCircleAction(inviteId); setNotice(null);
+    try {
+      await authedRequest('caregivers', { method: 'POST', body: { action: 'revoke', invite_id: inviteId } });
+      setNotice({ kind: 'success', text: 'ยกเลิกคำเชิญแล้ว' });
+      await loadCircle(patientId);
+    } catch (e) {
+      setNotice({ kind: 'error', text: e.message || 'ยกเลิกคำเชิญไม่สำเร็จ' });
+    } finally {
+      setBusyCircleAction('');
+    }
+  }
+
+  async function removeCaregiver(patientId, memberId, memberName) {
+    if (!window.confirm(`ลบ ${memberName || 'ผู้ดูแลร่วม'} ออกจากทีมผู้ดูแลหรือไม่?`)) return;
+    setBusyCircleAction(memberId); setNotice(null);
+    try {
+      await authedRequest('caregivers', {
+        method: 'POST',
+        body: { action: 'remove', patient_id: patientId, user_id: memberId },
+      });
+      setNotice({ kind: 'success', text: 'ลบผู้ดูแลร่วมออกจากทีมแล้ว' });
+      await loadCircle(patientId);
+    } catch (e) {
+      setNotice({ kind: 'error', text: e.message || 'ลบผู้ดูแลร่วมไม่สำเร็จ' });
+    } finally {
+      setBusyCircleAction('');
+    }
+  }
+
+  async function acceptInvite(token) {
+    setAcceptingInviteId(token); setNotice(null);
+    try {
+      const result = await authedRequest('invites', { method: 'POST', body: { token } });
+      setUrlInviteToken('');
+      window.history.replaceState(null, '', window.location.pathname);
+      await Promise.all([loadDashboard(true), loadInvites()]);
+      setNotice({
+        kind: 'success',
+        text: result.patient?.display_name ? `เข้าร่วมดูแล "${result.patient.display_name}" เป็นผู้ดูแลร่วมแล้ว` : 'ยอมรับคำเชิญเรียบร้อยแล้ว',
+      });
+    } catch (e) {
+      setNotice({ kind: 'error', text: e.message || 'ยอมรับคำเชิญไม่สำเร็จ' });
+    } finally {
+      setAcceptingInviteId('');
+    }
+  }
+
+  async function copyInviteLink(token) {
+    try {
+      await navigator.clipboard.writeText(inviteLink(token));
+      setNotice({ kind: 'success', text: 'คัดลอกลิงก์เชิญแล้ว ส่งให้ผู้รับได้เลย' });
+    } catch {
+      window.prompt('คัดลอกลิงก์นี้:', inviteLink(token));
+    }
+  }
+
+  function dismissIncomingInvite() {
+    setUrlInviteToken('');
+    window.history.replaceState(null, '', window.location.pathname);
+  }
+
+  function dismissPendingInvite(inviteId) {
+    setDismissedInvites((list) => [...list, inviteId]);
+  }
+
   async function logout() {
     await signOut();
   }
@@ -523,6 +683,39 @@ function Dashboard() {
               {notice.kind === 'error' ? <XCircle size={17} className="mt-1 shrink-0" /> : <CheckCircle2 size={17} className="mt-1 shrink-0" />}
               <div className="flex-1">{notice.text}</div>
               <button aria-label="ปิดข้อความ" onClick={() => setNotice(null)}><XCircle size={16} /></button>
+            </div>
+          )}
+
+          {!loading && (urlInviteToken || pendingInvites.some((item) => !dismissedInvites.includes(item.invite_id))) && (
+            <div className="mt-5 space-y-2">
+              {urlInviteToken && (
+                <div role="status" className="flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3.5 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="font-semibold">คุณเปิดมาพร้อมลิงก์เชิญเข้าร่วมดูแล</div>
+                    <div className="mt-0.5 text-xs leading-5 text-blue-800/80">ตรวจสอบว่าบัญชีนี้ใช้อีเมลเดียวกับที่ผู้เชิญระบุ แล้วกดยอมรับได้เลย</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button onClick={() => acceptInvite(urlInviteToken)} disabled={acceptingInviteId === urlInviteToken} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-60">
+                      {acceptingInviteId === urlInviteToken ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}{acceptingInviteId === urlInviteToken ? 'กำลังยอมรับ…' : 'ยอมรับคำเชิญ'}
+                    </button>
+                    <button onClick={dismissIncomingInvite} aria-label="ซ่อนลิงก์เชิญนี้" className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-100"><X size={14} /></button>
+                  </div>
+                </div>
+              )}
+              {pendingInvites.filter((item) => !dismissedInvites.includes(item.invite_id)).map((item) => (
+                <div key={item.invite_id} role="status" className="flex flex-col gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3.5 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="font-semibold">คำเชิญให้ร่วมดูแล “{item.display_name}” รอเข้าร่วม</div>
+                    <div className="mt-0.5 text-xs leading-5 text-blue-800/80">รับที่อีเมล {item.email} · หมดอายุ {formatDate(item.expires_at)} · ผู้ดูแลร่วมเห็นข้อมูลและรับแจ้งเตือนได้ แต่แก้ไขข้อมูลไม่ได้</div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <button onClick={() => acceptInvite(item.token)} disabled={acceptingInviteId === item.token} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-60">
+                      {acceptingInviteId === item.token ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}{acceptingInviteId === item.token ? 'กำลังยอมรับ…' : 'ยอมรับคำเชิญ'}
+                    </button>
+                    <button onClick={() => dismissPendingInvite(item.invite_id)} aria-label={`ซ่อนคำเชิญดูแล ${item.display_name}`} className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-100"><X size={14} /></button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
 
@@ -639,6 +832,9 @@ function Dashboard() {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <div className="truncate text-sm font-semibold text-slate-900">{patient.display_name}</div>
+                              {isOwnerOf(patient)
+                                ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">เจ้าของหลัก</span>
+                                : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">ผู้ดูแลร่วม</span>}
                               {patient.is_archived && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">เก็บเข้าคลัง</span>}
                             </div>
                             <div className="mt-0.5 text-xs text-slate-400">
@@ -650,13 +846,17 @@ function Dashboard() {
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs text-slate-600">{patientDevices.length} อุปกรณ์</span>
-                          <button type="button" onClick={() => startEditingPatient(patient)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                            <Pencil size={13} /> แก้ไข
-                          </button>
-                          <button type="button" onClick={() => toggleArchivePatient(patient)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
-                            {patient.is_archived ? <RotateCcw size={13} /> : <Archive size={13} />}
-                            {patient.is_archived ? 'กู้คืน' : 'เก็บเข้าคลัง'}
-                          </button>
+                          {isOwnerOf(patient) && (
+                            <>
+                              <button type="button" onClick={() => startEditingPatient(patient)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                                <Pencil size={13} /> แก้ไข
+                              </button>
+                              <button type="button" onClick={() => toggleArchivePatient(patient)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                                {patient.is_archived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                                {patient.is_archived ? 'กู้คืน' : 'เก็บเข้าคลัง'}
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
 
@@ -708,6 +908,7 @@ function Dashboard() {
 
                       <PatientFiles
                         files={patientFiles}
+                        canManage={isOwnerOf(patient)}
                         uploading={uploadingPatientId === patient.id}
                         downloadingId={downloadingFileId}
                         deletingId={deletingFileId}
@@ -715,6 +916,95 @@ function Dashboard() {
                         onDownload={downloadFile}
                         onDelete={deleteFile}
                       />
+
+                      {isOwnerOf(patient) && (
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-white p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-600">
+                              <Users size={13} /> ทีมผู้ดูแล
+                              <span className="hidden truncate text-[10px] font-normal text-slate-400 sm:inline">
+                                เชิญได้ทีละ 1 ลิงก์ต่ออีเมล ใช้ได้ 7 วัน ผู้รับต้องเข้าสู่ระบบด้วยอีเมลเดียวกัน
+                              </span>
+                            </div>
+                            <button type="button" onClick={() => toggleCircle(patient)} aria-expanded={circleOpenId === patient.id} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                              {circleOpenId === patient.id ? 'ปิด' : 'จัดการทีม'}
+                            </button>
+                          </div>
+
+                          {circleOpenId === patient.id && (
+                            <div className="mt-3">
+                              {circleLoading ? (
+                                <div className="py-3 text-center text-xs text-slate-400">กำลังโหลดทีมผู้ดูแล…</div>
+                              ) : circleData?.error ? (
+                                <p className="text-xs leading-5 text-rose-700">{circleData.error}</p>
+                              ) : circleData ? (
+                                <>
+                                  {freshInvite?.patient_id === patient.id && (
+                                    <div className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs leading-5">
+                                      <div className="font-semibold text-emerald-900">ลิงก์เชิญสำหรับ {freshInvite.email} พร้อมแล้ว</div>
+                                      <div className="mt-1 break-all text-emerald-800/80">{inviteLink(freshInvite.token)}</div>
+                                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                                        <button type="button" onClick={() => copyInviteLink(freshInvite.token)} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-700 px-3 py-1.5 font-semibold text-white hover:bg-emerald-800">
+                                          <Copy size={13} /> คัดลอกลิงก์
+                                        </button>
+                                        <span className="text-emerald-800/70">ผู้รับเปิดลิงก์แล้วยืนยันด้วยอีเมลของตัวเอง</span>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <form onSubmit={(e) => { e.preventDefault(); createInvite(patient.id); }} className="flex flex-col gap-2 sm:flex-row">
+                                    <input
+                                      type="email"
+                                      inputMode="email"
+                                      autoComplete="email"
+                                      value={inviteEmail}
+                                      onChange={(e) => setInviteEmail(e.target.value)}
+                                      required
+                                      placeholder="อีเมลผู้ดูแลที่ต้องการเชิญ"
+                                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                                    />
+                                    <button disabled={inviting} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1e3764] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#28477e] disabled:opacity-60">
+                                      <Plus size={13} />{inviting ? 'กำลังสร้าง…' : 'สร้างลิงก์เชิญ'}
+                                    </button>
+                                  </form>
+
+                                  <ul className="mt-3 space-y-1.5">
+                                    {circleData.members.map((member) => (
+                                      <li key={member.user_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="truncate font-medium text-slate-700">{member.full_name || member.user_id}</div>
+                                          <div className="text-[10px] text-slate-400">เข้าร่วมเมื่อ {formatDate(member.created_at)}</div>
+                                        </div>
+                                        {member.role === 'primary' ? (
+                                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">เจ้าของหลัก</span>
+                                        ) : (
+                                          <>
+                                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">ผู้ดูแลร่วม</span>
+                                            <button type="button" onClick={() => removeCaregiver(patient.id, member.user_id, member.full_name)} disabled={busyCircleAction === member.user_id} className="rounded-lg border border-slate-200 px-2 py-1 font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60">
+                                              {busyCircleAction === member.user_id ? '…' : 'ลบออก'}
+                                            </button>
+                                          </>
+                                        )}
+                                      </li>
+                                    ))}
+                                    {circleData.invites.map((invite) => (
+                                      <li key={invite.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50/70 px-2.5 py-2 text-xs">
+                                        <div className="min-w-0 flex-1">
+                                          <div className="truncate font-medium text-amber-900">คำเชิญรอยืนยัน · {invite.email}</div>
+                                          <div className="text-[10px] text-amber-800/70">หมดอายุ {formatDate(invite.expires_at)}</div>
+                                        </div>
+                                        <button type="button" onClick={() => revokeCaregiverInvite(patient.id, invite.id)} disabled={busyCircleAction === invite.id} className="rounded-lg border border-amber-200 px-2 py-1 font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60">
+                                          {busyCircleAction === invite.id ? '…' : 'ยกเลิก'}
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
