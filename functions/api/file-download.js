@@ -1,4 +1,5 @@
 import { authenticate } from './_lib/auth.js';
+import { assertMember } from './_lib/access.js';
 import { queryOne } from './_lib/db.js';
 import { HttpError, requireUuid, route } from './_lib/http.js';
 
@@ -21,8 +22,8 @@ export const onRequestGet = route(async ({ request, env }) => {
     env,
     `select f.id, f.object_key, f.file_name, f.content_type, f.size_bytes::int as size_bytes
        from public.patient_files f
-       join public.patients p on p.id = f.patient_id
-      where f.id = $1 and p.owner_id = $2
+       join public.caregiver_links cl on cl.patient_id = f.patient_id and cl.user_id = $2
+      where f.id = $1
       limit 1`,
     [fileId, userId],
   );

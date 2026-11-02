@@ -20,12 +20,28 @@ const ALERT_MESSAGES = {
   BLE_DISCONNECTED: 'การเชื่อมต่อ BLE ขาดหาย',
 };
 
-/** Best-effort email; never blocks or fails the device ingest response. */
-async function notify(env, ownerId, builder, values) {
+/** Best-effort email to every caregiver of the patient; never blocks ingest. */
+async function notify(env, patientId, builder, values) {
   try {
-    const to = env.ALERT_NOTIFY_TO || (await getClerkUser(ownerId, env)).email;
-    if (!to) return;
-    await sendEmail(env, { to, ...builder(values) });
+    if (env.ALERT_NOTIFY_TO) {
+      await sendEmail(env, { to: env.ALERT_NOTIFY_TO, ...builder(values) });
+      return;
+    }
+
+    // One email per member of the patient circle (dedup recipients).
+    const members = await query(
+      env,
+      `select distinct user_id from public.caregiver_links where patient_id = $1`,
+      [patientId],
+    );
+    const tos = [];
+    for (const m of members) {
+      const user = await getClerkUser(m.user_id, env);
+      if (user.email && !tos.includes(user.email)) tos.push(user.email);
+    }
+    for (const to of tos) {
+      await sendEmail(env, { to, ...builder(values) });
+    }
   } catch (error) {
     console.error('Notification email failed:', error?.message || error);
   }
@@ -135,7 +151,7 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
     );
 
     waitUntil(
-      notify(env, device.owner_id, buildPillboxRequestEmail, {
+      notify(env, device.patient_id, buildPillboxRequestEmail, {
         patientName: device.patient_name,
         compartmentNo: compartment,
         expiresAt,
@@ -160,7 +176,7 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
   );
 
   waitUntil(
-    notify(env, device.owner_id, buildAlertEmail, {
+    notify(env, device.patient_id, buildAlertEmail, {
       patientName: device.patient_name,
       deviceName: device.device_name,
       message,

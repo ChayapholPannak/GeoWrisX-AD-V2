@@ -1,4 +1,5 @@
 import { authenticate } from './_lib/auth.js';
+import { assertMember } from './_lib/access.js';
 import { query, queryOne } from './_lib/db.js';
 import { HttpError, json, requireUuid, route } from './_lib/http.js';
 
@@ -30,7 +31,7 @@ async function assertPatientOwnership(env, patientId, userId) {
   return patient;
 }
 
-/** GET /api/files?patient_id=<uuid> */
+/** GET: every member of the patient circle can stream the file list. */
 export const onRequestGet = route(async ({ request, env }) => {
   const { userId } = await authenticate(request, env);
   const patientId = requireUuid(
@@ -38,7 +39,7 @@ export const onRequestGet = route(async ({ request, env }) => {
     'รหัสผู้ป่วยไม่ถูกต้อง',
   );
 
-  await assertPatientOwnership(env, patientId, userId);
+  await assertMember(env, patientId, userId);
 
   const files = await query(
     env,
@@ -54,7 +55,7 @@ export const onRequestGet = route(async ({ request, env }) => {
   return json(200, { files });
 });
 
-/** POST /api/files  (multipart/form-data: patient_id + file) */
+/** POST: uploads stay a primary-caregiver action. */
 export const onRequestPost = route(async ({ request, env }) => {
   const { userId } = await authenticate(request, env);
 
@@ -108,7 +109,7 @@ export const onRequestPost = route(async ({ request, env }) => {
   }
 });
 
-/** DELETE /api/files?file_id=<uuid> */
+/** DELETE: primary caregiver only (companion is read-only). */
 export const onRequestDelete = route(async ({ request, env }) => {
   const { userId } = await authenticate(request, env);
   const fileId = requireUuid(

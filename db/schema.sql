@@ -165,10 +165,59 @@ create trigger caregiver_profiles_set_updated_at
   before update on public.caregiver_profiles
   for each row execute function public.set_updated_at();
 
+-- ================================================================
+-- Caregiver sharing (multiple caregivers per patient)
+-- patients.owner_id stays the *primary* caregiver; extra members live here.
+-- ================================================================
+create table if not exists public.caregiver_links (
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  user_id    text not null,
+  role       text not null default 'companion' check (role in ('primary', 'companion')),
+  added_by   text,
+  created_at timestamptz not null default now(),
+  constraint caregiver_links_pk primary key (patient_id, user_id),
+  constraint caregiver_links_user_check check (char_length(user_id) between 1 and 64)
+);
+
+-- Backfill: every existing owner becomes the primary member.
+insert into public.caregiver_links (patient_id, user_id, role)
+select p.id, p.owner_id, 'primary'
+  from public.patients p
+ where not exists (
+   select 1 from public.caregiver_links cl
+    where cl.patient_id = p.id and cl.user_id = p.owner_id
+ );
+
+create index if not exists caregiver_links_user_idx
+  on public.caregiver_links (user_id);
+
+-- Link-based invites: the primary caregiver shares a one-off URL; the invitee
+-- must sign in with a Clerk account whose email matches exactly.
+create table if not exists public.caregiver_invites (
+  id         uuid primary key default gen_random_uuid(),
+  patient_id uuid not null references public.patients(id) on delete cascade,
+  email      text not null check (char_length(email) between 3 and 200),
+  status     text not null default 'pending'
+             check (status in ('pending', 'accepted', 'revoked', 'expired')),
+  token      text not null unique default encode(gen_random_bytes(32), 'hex'),
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null default (now() + interval '7 days'),
+  accepted_by text
+);
+
+create index if not exists caregiver_invites_email_idx
+  on public.caregiver_invites (lower(email), status);
+
+-- one live invite per patient + email (pending rows only)
+create unique index if not exists caregiver_invites_pending_uniq
+  on public.caregiver_invites (patient_id, lower(email))
+  where status = 'pending';
+
 -- =====================================================================
 -- Atomic pillbox approval
--- Validates owner + pending state + non-expired request + BLE proof, then
--- queues a short-lived command. It does NOT actuate a physical lock.
+-- Validates membership + pending state + non-expired request + BLE proof,
+-- then queues a short-lived command. It does NOT actuate a physical lock.
 -- Error codes are mapped to HTTP responses in functions/api/approve-pillbox.js.
 -- =====================================================================
 create or replace function public.approve_pillbox_request(
@@ -177,7 +226,6 @@ create or replace function public.approve_pillbox_request(
 )
 returns jsonb
 language plpgsql
-security definer
 set search_path = public, pg_temp
 as $$
 declare
@@ -190,9 +238,9 @@ begin
 
   select a.* into v_request
   from public.pillbox_approvals a
-  join public.patients p on p.id = a.patient_id
+  join public.caregiver_links cl on cl.patient_id = a.patient_id
   where a.id = p_request_id
-    and p.owner_id = p_user_id
+    and cl.user_id = p_user_id
   for update of a;
 
   if not found then

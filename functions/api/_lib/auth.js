@@ -83,6 +83,38 @@ export async function getClerkUser(userId, env) {
 }
 
 /**
+ * Resolve a Clerk user by email (used to react to invites and to detect
+ * members who already exist). Returns null when no account matches.
+ */
+export async function findClerkUserByEmail(env, email) {
+  if (!env.CLERK_SECRET_KEY || !email) return null;
+  try {
+    const response = await fetch(
+      `https://api.clerk.com/v1/users?email_address=${encodeURIComponent(email)}&limit=1`,
+      {
+        headers: {
+          Authorization: `Bearer ${env.CLERK_SECRET_KEY}`,
+          Accept: 'application/json',
+        },
+      },
+    );
+    if (!response.ok) return null;
+    const users = await response.json();
+    const user = Array.isArray(users) ? users[0] : null;
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: (user.email_addresses || []).find((item) => item.id === user.primary_email_address_id)
+        ?.email_address || email,
+      fullName: [user.first_name, user.last_name].filter(Boolean).join(' ').trim(),
+    };
+  } catch (error) {
+    console.error('Clerk email lookup error:', error?.message || error);
+    return null;
+  }
+}
+
+/**
  * Constant-time-ish comparison for the prototype device gateway secret.
  * Cloudflare Workers have no node:crypto timingSafeEqual, so compare digests.
  */
