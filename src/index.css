@@ -1,25 +1,35 @@
 @import "tailwindcss";
 
+/* ============================================================
+   GeoWrisX AD — design system "สายรัด + วงผู้ดูแล"
+   ความคิดหลัก: หน้าจอสงบสีขาวน้ำเงินเขียว (paper), จุดสำคัญ
+   เดียวคือแถบตัวเลขสถานการณ์, การเคลื่อนไหวตอบท่าเท่านั้น
+   ============================================================ */
+
 :root {
-  --ground: #eef4f4;
+  --paper: #f4f7f6;          /* พื้นหลังกลาง: ขาวเมนต์เย็นแบบห้องพยาบาล */
   --surface: #ffffff;
-  --raised: #f4f6f8;
-  --active: #ebedee;
-  --border: #e8eaec;
-  --rule: #f0f1f2;
-  --control: #cdced1;
-  --text: #131416;
-  --muted: #5d5f60;
-  --accent: #1b6c80;
-  --positive: #1e7b4f;
-  --negative: #c4242a;
-  --warning: #92400e;
-  --radius-card: 8px;
-  --radius-control: 6px;
-  --radius-sheet: 16px;
-  font-family: "IBM Plex Sans", Inter, ui-sans-serif, system-ui, sans-serif;
+  --raised: #eef4f2;
+  --active: #e3efec;
+  --border: #dce6e3;
+  --rule: #e8efec;
+  --control: #c2d2ce;
+  --text: #122e36;           /* teal-charcoal เนียนหนึ่งไม่มีที่มา */
+  --muted: #4f6a71;
+  --accent: #125e71;         /* teal แบรนด์ — สืบต่อจากเวอร์ชันก่อน */
+  --accent-strong: #0c4453;
+  --mint: #7fc4bd;           /* เขียวอ่อนสำหรับ on-ink หน้า */
+  --positive: #237a57;
+  --negative: #c13b44;
+  --warning: #8a5a00;
+  --radius-card: 10px;
+  --radius-control: 8px;
+  --radius-sheet: 18px;
+  --spring: cubic-bezier(.34, 1.45, .58, 1);   /* ตรีอาคมตอบท่าพร้อมเกยน้อยขอบ */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  font-family: "Anuphan", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
   color: var(--text);
-  background: var(--ground);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -29,10 +39,20 @@
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input { font: inherit; }
-button { cursor: pointer; }
+button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: not-allowed; opacity: .52; }
-::selection { background: #cfe3e6; }
+::selection { background: #cfe4e6; }
 
+/* ---- ท่าตอบการกดทันที (ถอดหลัก "answer on pointer-down") ---- */
+button:not(:disabled):active { transform: scale(.97); transition: transform 90ms ease-out; }
+
+:focus-visible {
+  outline: 3px solid rgb(18 94 113 / .45);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ============================================================ tokens map  */
 .brand-mark {
   background: var(--accent);
   border-radius: var(--radius-control);
@@ -40,51 +60,36 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 }
 
 .setup-shell,
-.auth-shell { background: var(--ground); }
+.auth-shell { background: var(--paper); }
 
 .setup-context {
   border-radius: var(--radius-sheet);
-  background: #dcebec;
+  background: #dfeae7;
   color: var(--text);
 }
-
-.setup-context .brand-mark {
-  background: var(--accent);
-  color: #fff;
-}
-
+.setup-context .brand-mark { background: var(--accent); color: #fff; }
 .setup-context span { color: var(--accent); }
 .setup-context p { color: var(--muted); }
-
-.setup-panel {
-  border-color: var(--border);
-  border-radius: var(--radius-sheet);
-}
-
+.setup-panel { border-color: var(--border); border-radius: var(--radius-sheet); }
 .setup-shell .text-xs { font-size: 13px; }
 
+/* ---- หน้าล็อกอิน: ครึ่งซ้ายสีเข้มจมูกเขียวเก็บความสงบ, ครึ่งขวากระดาษ ----
+ ---- */
 .auth-shell { color: var(--text); }
 .auth-intro {
-  background: #e1eeee;
-  color: var(--text);
+  background: linear-gradient(165deg, #12444f 0%, #14596b 58%, #1e7078 100%);
+  color: #eaf4f2;
 }
-.auth-intro .brand-mark { background: var(--text); }
-.auth-intro span { color: var(--accent); }
-.auth-intro > div:last-child,
-.auth-intro p,
-.auth-intro .auth-feature { color: var(--muted); }
-.auth-shell .text-slate-400 { color: #526273 !important; }
-.auth-shell .text-slate-500 { color: #526273 !important; }
+.auth-intro .brand-mark { background: rgb(255 255 255 / .16); color: #fff; }
+.auth-intro h2, .auth-intro > div:last-child { color: #ffffff; }
+.auth-intro h2 span { color: var(--mint); }
+.auth-intro p, .auth-intro .auth-feature { color: #b9d4cf; }
+.auth-intro .text-xs { color: #92b3ae; }
+.auth-intro .auth-feature { border-top: 1px solid rgb(255 255 255 / .18); }
+.auth-intro .auth-feature > div:first-child { color: var(--mint); }
+
 .auth-shell .text-xs { font-size: 13px; }
-.auth-shell .text-blue-700,
-.auth-shell .text-blue-800,
-.auth-shell .hover\:text-blue-900:hover { color: var(--accent) !important; }
 .auth-mobile-title { display: block; }
-.auth-feature {
-  border-top: 1px solid #b9d2d4;
-  border-radius: 0;
-}
-.auth-feature > div:first-child { color: var(--accent); }
 .auth-shell input,
 .setup-shell input {
   border-color: var(--control) !important;
@@ -93,49 +98,75 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .auth-shell input:focus,
 .setup-shell input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid rgb(27 108 128 / .15);
+  outline: 3px solid rgb(18 94 113 / .16);
   outline-offset: 1px;
 }
-.auth-shell button[class*="bg-[#1e3764]"] {
-  background: var(--text) !important;
-  border-radius: var(--radius-control) !important;
-}
-.auth-shell button[class*="bg-[#1e3764]"]:hover { background: #303336 !important; }
 
-.app-shell { background: var(--ground); }
+/* ============================================================ shell  */
+.app-shell { background: var(--paper); }
+
+/* ---- รางข้างสีจมูกเขียวจาก "-" ของแผงซ้ายถือสถานะจริง ---- */
 .app-sidebar {
   width: 228px;
-  background: var(--ground);
+  background: #12303a;
   border: 0;
+  color: #a8c3c6;
 }
-.app-sidebar .brand-mark { background: var(--text); }
-.app-sidebar .brand-mark + div span { color: var(--accent); }
+.app-sidebar .brand-mark { background: rgb(255 255 255 / .12); color: #fff; }
+.app-sidebar .brand-mark + div,
+.app-sidebar .brand-mark + div span { color: #ffffff; }
+.app-sidebar .brand-mark + div span { color: var(--mint); }
 .nav-item {
   border-radius: var(--radius-control);
-  color: var(--muted);
+  color: #9fbcbf;
   min-height: 34px;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
 }
+.nav-item:hover { background: rgb(255 255 255 / .06); color: #dff0ec; }
 .nav-item.is-active {
-  background: var(--active);
-  color: var(--text);
+  background: rgb(255 255 255 / .1);
+  color: #ffffff;
 }
+.nav-item.is-active svg { color: var(--mint); }
 .sidebar-note {
-  background: var(--raised);
-  border: 1px solid var(--border);
+  background: rgb(255 255 255 / .05);
+  border: 1px solid rgb(255 255 255 / .1);
   border-radius: var(--radius-card);
-  color: var(--muted);
+  color: #9fbcbf;
 }
+.sidebar-note > div { color: #dff0ec; }
 .sidebar-note > div:last-child {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-control);
-}
-.app-main { background: var(--ground); }
-.app-topbar {
-  min-height: 48px;
-  background: var(--ground);
+  background: rgb(255 255 255 / .07);
   border: 0;
+  border-radius: var(--radius-control);
+  color: #b9d4cf;
 }
+
+.app-main { background: var(--paper); }
+/* skip link: ซ่อนจนกว่าจะแตะผ่านแป้นพิมพ์ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  z-index: 9999;
+}
+.skip-link:focus {
+  position: static;
+  width: auto; height: auto;
+  padding: 8px 14px;
+  margin: 10px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-control);
+  font-size: 14px;
+  text-decoration: none;
+  outline: none;
+}
+.app-topbar { min-height: 48px; background: var(--paper); border: 0; }
+
+/* ---- แผงหลักกระดาษ + การตั้งชื่อกสกรมด้าม ---- */
 .app-sheet {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -157,52 +188,70 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 }
 .app-sheet input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid rgb(27 108 128 / .15);
+  outline: 3px solid rgb(18 94 113 / .16);
   outline-offset: 1px;
 }
+
+/* ---- ปุ่ม action หลัก (semantic: ink หลัก, accent ย่อรับสายแจ้ง) ---- */
 .app-shell button[class*="bg-[#1e3764]"] {
-  background: var(--text) !important;
+  background: #173b44 !important;
   border-radius: var(--radius-control) !important;
+  transition: background 160ms var(--ease-out), transform 90ms ease-out;
 }
-.app-shell button[class*="bg-[#1e3764]"]:hover { background: #303336 !important; }
+.app-shell button[class*="bg-[#1e3764]"]:hover { background: var(--accent-strong) !important; }
 .refresh-control {
   border: 1px solid var(--control);
   border-radius: var(--radius-control);
   color: var(--muted);
+  transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
 }
+.refresh-control:hover { border-color: var(--accent); color: var(--accent); background: #fbfdfd; }
+
+/* ---- แถบตัวเลขสถานการณ์: จุดสำคัญเดียวของหน้า ---- */
 .metric-strip {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-card);
+  overflow: hidden;
 }
-.metric-cell {
-  min-width: 0;
-  padding: 20px;
+.metric-cell { position: relative; min-width: 0; padding: 18px 20px; }
+.metric-cell + .metric-cell { border-left: 1px solid var(--rule); }
+.metric-cell::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 46px; height: 3px;
+  border-radius: 0 0 2px 0;
+  background: var(--control);
 }
-.metric-cell + .metric-cell { border-left: 1px solid var(--border); }
+.metric-blue::before { background: var(--accent); }
+.metric-green::before { background: var(--positive); }
+.metric-red::before { background: var(--negative); }
+.metric-amber::before { background: var(--warning); }
 .metric-cell p:first-child {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13.5px;
   line-height: 1.35;
 }
 .metric-value {
-  font-size: 28px;
-  font-weight: 400;
+  font-size: 30px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -.03em;
+  letter-spacing: -.02em;
   line-height: 1.1;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 .metric-cell p:last-child {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.45;
-  margin-top: 8px;
+  margin-top: 4px;
 }
 .metric-green .metric-value { color: var(--positive); }
 .metric-red .metric-value { color: var(--negative); }
 .metric-amber .metric-value { color: var(--warning); }
-.app-shell .bg-blue-50 { background-color: #e7f0f1 !important; }
+
+.app-shell .bg-blue-50 { background-color: #e8f2f1 !important; }
 .app-shell .text-blue-700,
 .app-shell .text-blue-800 { color: var(--accent) !important; }
 .app-shell .rounded-2xl { border-radius: var(--radius-card); }
@@ -210,6 +259,89 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 .app-shell .text-\[11px\] { font-size: 12px; }
 .app-shell .text-\[10px\] { font-size: 11px; }
 
+/* ============================================================ motion  */
+/* หน้าเปิด: เหตุการณ์เปิดหน้าเดียว — หัวข้อ แถวตัวเลข สอง section แรก */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.app-fade { animation: rise 480ms var(--ease-out) both; }
+.app-fade-1 { animation: rise 480ms 60ms var(--ease-out) both; }
+.app-fade-2 { animation: rise 480ms 140ms var(--ease-out) both; }
+.app-fade-3 { animation: rise 480ms 220ms var(--ease-out) both; }
+
+/* ตอบท่า "รายการสำเร็จ/ผิดพลาด" — น้ำนมตขาหามสปริง */
+@keyframes notice-in {
+  0% { opacity: 0; transform: translateY(6px) scale(.98); }
+  60% { transform: translateY(0) scale(1.012); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+[role="status"],
+[role="alert"] {
+  animation: notice-in 380ms var(--spring) both;
+}
+
+/* แบนเนอร์คำเชิญ: เอียงสัญญาณให้หนังทุมสเกลท่ากับทิศ้ารวด */
+@keyframes banner-in {
+  0% { opacity: 0; transform: translateX(14px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+.invite-banner { animation: banner-in 420ms var(--ease-out) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-fade, .app-fade-1, .app-fade-2, .app-fade-3 { animation: none; }
+  [role="status"], [role="alert"], .invite-banner { animation: none; }
+  button:not(:disabled):active { transform: none; }
+  .welcome-card .welcome-beat-icon { animation: none; }
+}
+
+/* ============================================================ welcome (ครั้งแรกเท่านั้น)  */
+.welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(10 26 30 / .62);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  animation: welcome-scrim 260ms var(--ease-out) both;
+  overscroll-behavior: contain;
+}
+@keyframes welcome-scrim { from { opacity: 0; } to { opacity: 1; } }
+
+.welcome-card {
+  width: min(460px, 100%);
+  border-radius: var(--radius-sheet);
+  background: var(--surface);
+  box-shadow: 0 24px 60px rgb(9 24 29 / .35);
+  padding: 28px 28px 20px;
+  text-align: center;
+  animation: welcome-pop 380ms var(--spring) both;
+}
+@keyframes welcome-pop {
+  0% { opacity: 0; transform: translateY(14px) scale(.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.welcome-beat-icon {
+  color: var(--accent);
+  animation: beat-pop 480ms var(--spring) both;
+}
+@keyframes beat-pop {
+  0% { opacity: 0; transform: scale(.6); }
+  62% { transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.welcome-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--control);
+  transition: background 200ms var(--ease-out), transform 200ms var(--ease-out);
+}
+.welcome-dot.is-now { background: var(--accent); transform: scale(1.25); }
+
+/* ============================================================ responsive  */
 @media (min-width: 1024px) {
   .app-main {
     margin-left: 228px;
@@ -221,13 +353,13 @@ button:disabled { cursor: not-allowed; opacity: .52; }
 
 @media (max-width: 1279px) {
   .metric-cell:nth-child(odd) { border-left: 0; }
-  .metric-cell:nth-child(n + 3) { border-top: 1px solid var(--border); }
+  .metric-cell:nth-child(n + 3) { border-top: 1px solid var(--rule); }
 }
 
 @media (max-width: 639px) {
   .auth-mobile-title { font-size: 24px; }
   .app-sheet { border-radius: 0; border-left: 0; border-right: 0; }
-  .metric-cell + .metric-cell { border-left: 0; border-top: 1px solid var(--border); }
-  .metric-cell { padding: 16px; }
+  .metric-cell + .metric-cell { border-left: 0; border-top: 1px solid var(--rule); }
+  .metric-cell { padding: 14px 16px; }
   .auth-intro { display: none; }
 }
