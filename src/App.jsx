@@ -543,6 +543,7 @@ function Dashboard() {
     try {
       await authedRequest('caregivers', { method: 'POST', body: { action: 'revoke', invite_id: inviteId } });
       setNotice({ kind: 'success', text: 'ยกเลิกคำเชิญแล้ว' });
+      setFreshInvite(null); // the copied link just died; remove its green box
       await loadCircle(patientId);
     } catch (e) {
       setNotice({ kind: 'error', text: e.message || 'ยกเลิกคำเชิญไม่สำเร็จ' });

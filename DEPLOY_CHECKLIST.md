@@ -97,3 +97,11 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - [ ] จำกัด Clerk allowed origins เฉพาะโดเมนจริง
 - [ ] ตั้ง backup/retention ของ Neon ตามนโยบายข้อมูลสุขภาพ
 - [ ] ทำความเข้าใจว่า prototype นี้ยังไม่ใช่อุปกรณ์การแพทย์ที่ผ่านการรับรอง
+
+
+## J. Auth ข้อควรรู้ (multi-caregiver, 3 พ.ย. 2569)
+
+- [ ] CLERK_AUTHORIZED_PARTIES ใน wrangler.toml (และช่อง Environment variables กรณี secret) ต้องมีต้นทางที่ใช้ล็อกอิน ตรงตัวทีละข้อ (ไม่รองรับ wildcard)
+- [ ] ทดสอบ/ใช้งานจริงบน https://geowrisx-ad-v2.pages.dev เท่านั้น — ล็อกอินจาก URL deploy ชั่วคราว (ย่อยระดับ hash เช่น 63b01e53.geowrisx-ad-v2.pages.dev) จะโดน 401 เพราะ azp ไม่ตรงลิสต์
+- [ ] หลัง deploy รัน db/schema.sql ใหม่ได้ (idempotent): node scripts/run-schema.mjs พร้อม NEON_DATABASE_URL (สร้าง caregiver_links และ caregiver_invites)
+- [ ] สมาชิกที่ถูกเชิญต้องตอบรับด้วยบัญชี Clerk ที่ใช้ EMAIL เดียวกับในคำเชิญเท่านั้น
