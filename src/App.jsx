@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
@@ -64,9 +64,9 @@ function AuthScreen() {
               routing="hash"
               appearance={{
                 variables: {
-                  colorPrimary: '#1b6c80',
-                  borderRadius: '6px',
-                  fontFamily: "'IBM Plex Sans', Inter, ui-sans-serif, system-ui, sans-serif",
+                  colorPrimary: '#125e71',
+                  borderRadius: '8px',
+                  fontFamily: "'Anuphan', ui-sans-serif, system-ui, sans-serif",
                 },
               }}
             />
@@ -196,6 +196,78 @@ function PatientFiles({ files, canManage = false, uploading, downloadingId, dele
   );
 }
 
+// ต้อนรับผู้ใช้ครั้งแรกเท่านั้น (เก็บ flag ที่ localStorage) — 3 บีต:
+// ภาพรวมสถิติ → อนุมัติกล่องยา BLE → ทีมผู้ดูแลหลายคน
+const WELCOME_KEY = 'gwx-welcome-v1';
+
+function WelcomeFlow({ onDone }) {
+  const beats = [
+    {
+      icon: Activity,
+      title: 'ภาพรวมความปลอดภัย มองเห็นในหน้าเดียว',
+      text: 'แถวตัวเลขด้านบนสรุปสิ่งที่ต้องตัดสินใจวันนี้: ผู้ป่วยที่ลงทะเบียน อุปกรณ์ออนไลน์ การแจ้งเตือนที่ยังไม่รับทราบ และคำขอเปิดกล่องยา',
+    },
+    {
+      icon: LockKeyhole,
+      title: 'คำขอกล่องยา ต้องยืนยัน BLE ก่อน',
+      text: 'ทุกคำขอเปิดกล่องยาต้องมีหลักฐาน Bluetooth ว่ากล่องอยู่ใกล้ตัวจริง และหมดอายุเองภายในหนึ่งชั่วโมง — อนุมัติเมื่อมั่นใจเท่านั้น',
+    },
+    {
+      icon: Users,
+      title: 'ดูแลพร้อมกันได้หลายคน',
+      text: 'เชิญคนในครอบครัวเข้ามาเป็น "ผู้ดูแลร่วม" เพื่อรับแจ้งเตือนและช่วยอนุมัติกล่องยา ส่วนการแก้ไขข้อมูลสงวนไว้ให้เจ้าของหลัก',
+    },
+  ];
+  const [step, setStep] = useState(0);
+  const primaryRef = useRef(null);
+  const last = step === beats.length - 1;
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onDone();
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onDone]);
+
+  useEffect(() => {
+    primaryRef.current?.focus();
+  }, [step]);
+
+  const beat = beats[step];
+  const Icon = beat.icon;
+
+  return (
+    <div className="welcome-overlay">
+      <div role="dialog" aria-modal="true" aria-label="แนะนำการใช้งานครั้งแรก" className="welcome-card">
+        <div key={step} className="welcome-beat-icon mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-blue-50" aria-hidden="true">
+          <Icon size={26} />
+        </div>
+        <h2 className="mt-4 text-lg font-bold text-slate-900">{beat.title}</h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{beat.text}</p>
+        <div className="mt-5 flex items-center justify-center gap-1.5" aria-hidden="true">
+          {beats.map((item, i) => (
+            <span key={i} className={`welcome-dot${i === step ? ' is-now' : ''}`} />
+          ))}
+        </div>
+        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+          <button type="button" onClick={onDone} className="px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600">
+            ข้ามคำแนะนำ
+          </button>
+          <button
+            ref={primaryRef}
+            type="button"
+            onClick={() => (last ? onDone() : setStep(step + 1))}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#1e3764] px-4 py-2 text-sm font-semibold text-white hover:bg-[#28477e]"
+          >
+            {last ? 'เริ่มใช้งาน' : 'ถัดไป'}<ChevronRight size={15} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const { getToken } = useAuth();
   const { user } = useUser();
@@ -206,6 +278,20 @@ function Dashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try {
+      return !window.localStorage.getItem(WELCOME_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const closeWelcome = useCallback(() => {
+    try {
+      window.localStorage.setItem(WELCOME_KEY, '1');
+    } catch { /* ignore */ }
+    setShowWelcome(false);
+  }, []);
 
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientRelationship, setNewPatientRelationship] = useState('');
@@ -633,7 +719,8 @@ function Dashboard() {
         </div>
       </aside>
 
-      <main className="app-main min-w-0">
+      <main className="app-main min-w-0" id="main">
+        <a href="#main" className="skip-link">ข้ามไปยังเนื้อหาหลัก</a>
         <header className="app-topbar sticky top-0 z-10 flex items-center justify-between px-4 py-3 sm:px-7 lg:px-9">
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-800 lg:hidden"><HeartPulse size={19} /></div>
@@ -647,14 +734,14 @@ function Dashboard() {
               <div className="max-w-48 truncate text-xs font-semibold text-slate-700">{displayName}</div>
               <div className="text-[11px] text-slate-400">บัญชีผู้ดูแล · Clerk</div>
             </div>
-            <button onClick={logout} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+            <button onClick={logout} aria-label="ออกจากระบบ" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
               <LogOut size={15} /><span className="hidden sm:inline">ออกจากระบบ</span>
             </button>
           </div>
         </header>
 
         <div className="app-sheet mx-auto max-w-[1500px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div className="app-fade flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight text-slate-950">ภาพรวมความปลอดภัย</h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
@@ -720,7 +807,7 @@ function Dashboard() {
             </div>
           )}
 
-          <section className="mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
+          <section className="app-fade-1 mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
             <div className="flex items-start gap-3">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><UserRound size={19} /></div>
               <div>
@@ -755,7 +842,7 @@ function Dashboard() {
             </form>
           </section>
 
-          <section className="metric-strip mt-6 grid sm:grid-cols-2 xl:grid-cols-4">
+          <section className="metric-strip app-fade-2 mt-6 grid sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="ผู้ป่วยที่ลงทะเบียน"
               value={loading ? '—' : activePatients.length}
@@ -783,7 +870,7 @@ function Dashboard() {
           </section>
 
           <div className="mt-6 grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
-            <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
+            <section className="app-fade-3 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-bold text-slate-900">ผู้ป่วยและอุปกรณ์</h2>
@@ -793,8 +880,14 @@ function Dashboard() {
               </div>
 
               <form onSubmit={addPatient} className="mt-5 grid gap-2 sm:grid-cols-2">
-                <input value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} minLength={2} maxLength={100} required placeholder="ชื่อผู้ป่วยหรือรหัสนามแฝง (แนะนำ)" className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
-                <input value={newPatientRelationship} onChange={(e) => setNewPatientRelationship(e.target.value)} maxLength={80} placeholder="ความสัมพันธ์ (ไม่บังคับ)" className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                <label className="text-xs text-slate-500">
+                  <span className="mb-1 block">ชื่อผู้ป่วยหรือรหัสนามแฝง (แนะนำ)</span>
+                  <input value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} minLength={2} maxLength={100} required className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                </label>
+                <label className="text-xs text-slate-500">
+                  <span className="mb-1 block">ความสัมพันธ์ (ไม่บังคับ)</span>
+                  <input value={newPatientRelationship} onChange={(e) => setNewPatientRelationship(e.target.value)} maxLength={80} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                </label>
                 <label className="text-xs text-slate-500">
                   <span className="mb-1 block">วันเกิด (ไม่บังคับ)</span>
                   <input type="date" value={newPatientDob} onChange={(e) => setNewPatientDob(e.target.value)} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
@@ -1104,6 +1197,7 @@ function Dashboard() {
           </footer>
         </div>
       </main>
+      {showWelcome && <WelcomeFlow onDone={closeWelcome} />}
     </div>
   );
 }
