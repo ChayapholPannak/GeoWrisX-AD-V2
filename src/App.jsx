@@ -843,6 +843,7 @@ function Dashboard() {
           </section>
 
           <section className="metric-strip app-fade-2 mt-6 grid sm:grid-cols-2 xl:grid-cols-4">
+  <div className="metric-pulse" aria-hidden="true" />
             <StatCard
               label="ผู้ป่วยที่ลงทะเบียน"
               value={loading ? '—' : activePatients.length}
@@ -919,16 +920,16 @@ function Dashboard() {
                   const patientDevices = data.devices.filter((device) => device.patient_id === patient.id);
                   const patientFiles = filesByPatient.get(patient.id) || [];
                   return (
-                    <div key={patient.id} className="py-4 first:pt-5 last:pb-0">
+                    <div key={patient.id} className="patient-card py-4 first:pt-5 last:pb-0">
                       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                         <div className="flex min-w-0 items-center gap-3">
-                          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 font-bold text-slate-600">{patient.display_name.slice(0, 1)}</div>
+                          <div className="care-avatar is-md shrink-0" aria-label={patient.display_name}>{patient.display_name.slice(0, 1)}</div>
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <div className="truncate text-sm font-semibold text-slate-900">{patient.display_name}</div>
                               {isOwnerOf(patient)
-                                ? <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">เจ้าของหลัก</span>
-                                : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">ผู้ดูแลร่วม</span>}
+                                ? <div className="care-avatar care-avatar-owner is-sm" title="เจ้าของหลัก">หลัก</div>
+                                : <div className="care-avatar care-avatar-companion is-sm" title="ผู้ดูแลร่วม">ร่วม</div>}
                               {patient.is_archived && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">เก็บเข้าคลัง</span>}
                             </div>
                             <div className="mt-0.5 text-xs text-slate-400">
@@ -1062,6 +1063,30 @@ function Dashboard() {
                                     </button>
                                   </form>
 
+                                  {circleData.members.length > 0 && (
+                                    <div className="care-circle mt-3" aria-hidden="true">
+                                      {circleData.members.slice(0, 6).map((member) => (
+                                        <div
+                                          key={member.user_id}
+                                          className={`care-avatar is-md ${member.role === 'primary' ? 'owner' : 'companion'}`}
+                                          title={member.role === 'primary' ? `${member.full_name || member.user_id} · เจ้าของหลัก` : `${member.full_name || member.user_id} · ผู้ดูแลร่วม`}
+                                        >
+                                          {(member.full_name || member.user_id || '?').trim().slice(0, 1).toUpperCase()}
+                                        </div>
+                                      ))}
+                                      {circleData.members.length > 6 && (
+                                        <div className="care-avatar is-md care-more" style={{ width: 'auto', borderRadius: 9999, padding: '0 10px' }}>
+                                          +{circleData.members.length - 6}
+                                        </div>
+                                      )}
+                                      {circleData.invites.length > 0 && (
+                                        <div className="care-avatar is-md" style={{ background: 'var(--raised)', color: 'var(--muted)', fontWeight: 600 }} title={`${circleData.invites.length} คำเชิญรอยืนยัน`}>
+                                          <Clock3 size={13} />
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
                                   <ul className="mt-3 space-y-1.5">
                                     {circleData.members.map((member) => (
                                       <li key={member.user_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
@@ -1082,12 +1107,12 @@ function Dashboard() {
                                       </li>
                                     ))}
                                     {circleData.invites.map((invite) => (
-                                      <li key={invite.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50/70 px-2.5 py-2 text-xs">
+                                      <li key={invite.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/60 px-2.5 py-2 text-xs">
                                         <div className="min-w-0 flex-1">
-                                          <div className="truncate font-medium text-amber-900">คำเชิญรอยืนยัน · {invite.email}</div>
-                                          <div className="text-[10px] text-amber-800/70">หมดอายุ {formatDate(invite.expires_at)}</div>
+                                          <div className="truncate font-medium text-blue-900">คำเชิญรอยืนยัน · {invite.email}</div>
+                                          <div className="text-[10px] text-blue-800/70">หมดอายุ {formatDate(invite.expires_at)}</div>
                                         </div>
-                                        <button type="button" onClick={() => revokeCaregiverInvite(patient.id, invite.id)} disabled={busyCircleAction === invite.id} className="rounded-lg border border-amber-200 px-2 py-1 font-semibold text-amber-800 hover:bg-amber-100 disabled:opacity-60">
+                                        <button type="button" onClick={() => revokeCaregiverInvite(patient.id, invite.id)} disabled={busyCircleAction === invite.id} className="rounded-lg border border-blue-200 px-2 py-1 font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-60">
                                           {busyCircleAction === invite.id ? '…' : 'ยกเลิก'}
                                         </button>
                                       </li>

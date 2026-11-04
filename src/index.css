@@ -251,6 +251,97 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .metric-red .metric-value { color: var(--negative); }
 .metric-amber .metric-value { color: var(--warning); }
 
+/* ---- วงกลมทับซ้อน: วงผู้ดูแล (จุดเด่นเดียวของหน้า) ---- */
+.care-circle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.care-avatar {
+  position: relative;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  box-shadow: 0 2px 6px rgb(9 24 29 / .1);
+  transition: transform 180ms var(--ease-out), box-shadow 180ms var(--ease-out), z-index 0ms;
+}
+.care-avatar:not(:last-child) {
+  margin-right: -11px;
+}
+.care-avatar:hover {
+  z-index: 3;
+  transform: scale(1.2) translateY(-2px);
+  box-shadow: 0 8px 20px rgb(9 24 29 / .22);
+}
+.care-avatar.owner {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  box-shadow: 0 4px 12px rgb(18 94 113 / .18);
+}
+.care-avatar.companion {
+  border-color: var(--mint);
+  color: var(--muted);
+  box-shadow: 0 2px 8px rgb(127 196 189 / .15);
+}
+.care-avatar.is-xs { width: 22px; height: 22px; font-size: 9px; }
+.care-avatar.is-sm { width: 28px; height: 28px; font-size: 11px; }
+.care-avatar.is-md { width: 34px; height: 34px; font-size: 14px; }
+.care-avatar.is-lg { width: 42px; height: 42px; font-size: 18px; }
+.care-more {
+  position: relative;
+  border-radius: 50%;
+  background: var(--raised);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out), background 180ms var(--ease-out);
+}
+.care-more:hover {
+  transform: scale(1.1);
+  background: var(--active);
+}
+
+/* ---- จังหวะสายรัดเบาๆ หลังแถบตัวเลขสถานการณ์ ---- */
+.metric-strip { position: relative; overflow: hidden; }
+.metric-pulse {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.metric-pulse::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: -30%;
+  width: 160%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(18 94 113 / .4), transparent);
+  transform: translateY(-50%);
+  animation: pulse-sweep 5s ease-in-out infinite;
+}
+@keyframes pulse-sweep {
+  0%, 30%, 100% { opacity: 0; transform: translateY(-50%) translateX(-100%); }
+  45%, 55% { opacity: 0.5; transform: translateY(-50%) translateX(100%); }
+  100% { opacity: 0; transform: translateY(-50%) translateX(220%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .metric-pulse { display: none !important; }
+}
+
+/* ---- บัตรผู้ป่วยแบบสมุดบันทึก (logbook feel) ---- */
+.patient-card { border: 1px solid var(--rule); background: var(--surface); }
+.patient-card:hover { border-color: var(--control); }
+
 .app-shell .bg-blue-50 { background-color: #e8f2f1 !important; }
 .app-shell .text-blue-700,
 .app-shell .text-blue-800 { color: var(--accent) !important; }
