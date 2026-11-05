@@ -9,9 +9,19 @@ let cachedUrl = '';
  * right fit for Cloudflare Pages Functions (no TCP pooling in workerd).
  */
 function getClient(env) {
-  const url = env.NEON_DATABASE_URL;
+  let url = env.NEON_DATABASE_URL;
   if (!url) {
     throw new HttpError(500, 'เซิร์ฟเวอร์ยังไม่ได้ตั้งค่า NEON_DATABASE_URL');
+  }
+  // @neondatabase/serverless rejects URLs with query params it does not
+  // understand — and its error message prints the full string (including the
+  // password). Strip such params before handing the URL over.
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.delete('channel_binding');
+    url = parsed.toString();
+  } catch {
+    throw new HttpError(500, 'NEON_DATABASE_URL รูปแบบไม่ถูกต้อง');
   }
   if (!cachedClient || cachedUrl !== url) {
     cachedClient = neon(url);

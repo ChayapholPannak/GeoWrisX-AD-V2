@@ -4,10 +4,24 @@
 import { readFile } from 'node:fs/promises';
 import { neon } from '@neondatabase/serverless';
 
-const url = process.env.NEON_DATABASE_URL || process.argv[2] || '';
+const url = sanitizeNeonUrl(process.env.NEON_DATABASE_URL || process.argv[2] || '');
 if (!url) {
   console.error('NEON_DATABASE_URL not set');
   process.exit(1);
+}
+
+// @neondatabase/serverless rejects URLs whose query string carries params it
+// does not understand (e.g. channel_binding) — and its error message prints the
+// whole string. Strip those params here so the secret never reaches an error.
+function sanitizeNeonUrl(raw) {
+  try {
+    const u = new URL(raw);
+    u.searchParams.delete('channel_binding');
+    u.searchParams.delete('sslmode'); // ssl is on by default for Neon
+    return u.toString();
+  } catch {
+    return '';
+  }
 }
 
 const sqlFile = new URL('../db/schema.sql', import.meta.url);
@@ -90,8 +104,7 @@ function splitStatements(text) {
 }
 
 const stmts = splitStatements(sqlText);
-const sql = neon(url);
-for (let n = 0; n < stmts.length; n += 1) {
+const sql = neon(url);for (let n = 0; n < stmts.length; n += 1) {
   const stmt = stmts[n];
   const label = stmt.replace(/--.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, ' ').trim().slice(0, 60);
   try {

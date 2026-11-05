@@ -3,7 +3,7 @@ import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
   Clock3, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
-  Pencil, Plus, RefreshCw, RotateCcw, Save, ShieldCheck, Trash2, UserRound, Users, Watch,
+  Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Trash2, UserRound, Users, Watch,
   X, XCircle,
 } from 'lucide-react';
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
@@ -345,6 +345,50 @@ function Dashboard() {
     const token = await requireToken();
     return apiRequest(functionName, { ...options, token });
   }, [requireToken]);
+
+  // View switching (dashboard / settings) — lightweight, no router.
+  const [view, setView] = useState('dashboard');
+
+  // User preferences (Settings menu) persisted via /api/prefs.
+  const [prefs, setPrefs] = useState({
+    notify_email: true,
+    notify_channels: { sos: true, geofence: true, tamper: true, battery: true, meds: true, daily_summary: false },
+    ui: { show_hr: true, show_sleep: true, show_files: true },
+  });
+  const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  const loadPrefs = useCallback(async () => {
+    try {
+      const result = await authedRequest('prefs');
+      if (result && result.prefs && typeof result.prefs === 'object') {
+        setPrefs((current) => ({ ...current, ...result.prefs }));
+      }
+      setPrefsLoaded(true);
+    } catch {
+      setPrefsLoaded(true); // ล้มเหลวเงียบ ๆ — ใช้ค่า default, toggle บันทึกครั้งถัดไปจะรู้เอง
+    }
+  }, [authedRequest]);
+
+  useEffect(() => {
+    loadPrefs();
+  }, [loadPrefs]);
+
+  const savePrefs = useCallback(async (next) => {
+    setSavingPrefs(true);
+    const previous = prefs;
+    setPrefs(next); // optimistic update
+    try {
+      const result = await authedRequest('prefs', { method: 'PUT', body: { prefs: next } });
+      if (result?.prefs) setPrefs((current) => ({ ...current, ...result.prefs }));
+      return null;
+    } catch (e) {
+      setPrefs(previous); // กลับค่าเมื่อบันทึกไม่สำเร็จ
+      return e.message || 'บันทึกการตั้งค่าไม่สำเร็จ';
+    } finally {
+      setSavingPrefs(false);
+    }
+  }, [authedRequest, prefs]);
 
   const loadDashboard = useCallback(async (quiet = false) => {
     if (quiet) setRefreshing(true); else setLoading(true);
@@ -707,10 +751,14 @@ function Dashboard() {
         </div>
         <div className="mt-10 px-3 text-[11px] font-medium text-slate-400">เมนูหลัก</div>
         <nav className="mt-3 space-y-1">
-          <NavItem active icon={Activity} label="ภาพรวมระบบ" />
-          <NavItem icon={Watch} label="สายรัดและอุปกรณ์" />
-          <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} />
-          <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} />
+          <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+          <NavItem icon={Watch} label="สายรัดและอุปกรณ์" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+          <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+          <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+        </nav>
+        <div className="mt-6 px-3 text-[11px] font-medium text-slate-400">บัญชีและการตั้งค่า</div>
+        <nav className="mt-3 space-y-1">
+          <NavItem icon={Settings} label="ตั้งค่า" active={view === 'settings'} onClick={() => setView('settings')} />
         </nav>
         <div className="sidebar-note mt-auto p-4">
           <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={17} /> Dual-Safety Matrix</div>
@@ -725,8 +773,8 @@ function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-800 lg:hidden"><HeartPulse size={19} /></div>
             <div>
-              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">ภาพรวม</span></div>
-              <div className="text-sm font-semibold text-slate-900">Caregiver Dashboard</div>
+              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : 'ภาพรวม'}</span></div>
+              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : 'Caregiver Dashboard'}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -740,6 +788,7 @@ function Dashboard() {
           </div>
         </header>
 
+        {view === 'dashboard' ? (
         <div className="app-sheet mx-auto max-w-[1500px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
           <div className="app-fade flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
@@ -1221,19 +1270,222 @@ function Dashboard() {
             <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> ข้อมูลทดสอบเท่านั้นจนกว่าจะผ่านการตรวจสอบความปลอดภัยและการทดสอบจริง</span>
           </footer>
         </div>
+        ) : (
+          <SettingsView
+            profile={caregiverProfile}
+            email={profileEmail}
+            patients={data.patients}
+            devices={data.devices}
+            inviteCount={pendingInvites.length}
+            prefs={prefs}
+            saving={savingPrefs}
+            onSavePrefs={savePrefs}
+            onBack={() => setView('dashboard')}
+          />
+        )}
       </main>
       {showWelcome && <WelcomeFlow onDone={closeWelcome} />}
     </div>
   );
 }
 
-function NavItem({ icon: Icon, label, active = false, count = 0 }) {
+function SettingsToggle({ checked, label, hint, onChange }) {
   return (
-    <div className={`nav-item flex items-center gap-3 px-3 py-2.5 text-sm ${active ? 'is-active font-semibold' : 'text-slate-500'}`}>
+    <label className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 px-3.5 py-3">
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-slate-800">{label}</span>
+        {hint && <span className="mt-0.5 block text-xs leading-5 text-slate-400">{hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-1 h-5 w-5 shrink-0 accent-[#1e3764]"
+      />
+    </label>
+  );
+}
+
+function SettingsView({ profile, email, patients, devices, inviteCount, prefs, saving, onSavePrefs, onBack }) {
+  const [draft, setDraft] = useState(prefs);
+  const [saveError, setSaveError] = useState('');
+  const [savedAt, setSavedAt] = useState('');
+
+  useEffect(() => { setDraft(prefs); }, [prefs]);
+
+  const channels = draft.notify_channels || {};
+  const ui = draft.ui || {};
+
+  function update(next) {
+    setDraft(next);
+    setSavedAt('');
+  }
+
+  function patch(key, value) {
+    update({ ...draft, [key]: value });
+  }
+
+  function patchChannel(key, value) {
+    update({ ...draft, notify_channels: { ...channels, [key]: value } });
+  }
+
+  function patchUi(key, value) {
+    update({ ...draft, ui: { ...ui, [key]: value } });
+  }
+
+  async function handleSave() {
+    setSaveError('');
+    const error = await onSavePrefs(draft);
+    if (error) setSaveError(error);
+    else setSavedAt(new Date().toLocaleTimeString('th-TH'));
+  }
+
+  const activeDevices = devices.filter((d) => !d.is_archived);
+
+  return (
+    <div className="app-fade mx-auto app-sheet max-w-[1100px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
+      <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950">ตั้งค่าและจัดการบัญชี</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+            ปรับการแจ้งเตือนและหน้าจอให้เหมาะกับคุณ — บันทึกไว้ในบัญชีผู้ดูแลของคุณเอง
+          </p>
+        </div>
+        <button onClick={onBack} className="refresh-control inline-flex w-fit items-center gap-2 px-4 py-2.5 text-sm font-semibold">
+          <ChevronRight size={15} className="rotate-180" /> กลับไปแดชบอร์ด
+        </button>
+      </div>
+
+      {saveError && (
+        <div role="alert" className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-800">{saveError}</div>
+      )}
+
+      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 font-bold text-slate-900"><BellRing size={18} className="text-slate-500" /> การแจ้งเตือน</h2>
+            <span className="text-[11px] text-slate-400">ช่องทาง + เรื่อง</span>
+          </div>
+          <div className="mt-4 space-y-2.5">
+            <SettingsToggle
+              checked={draft.notify_email !== false}
+              label="อีเมลแจ้งเตือน (Resend)"
+              hint="ส่งอีเมลเมื่อเกิดเหตุการณ์สำคัญที่เปิดไว้ด้านล่าง"
+              onChange={(v) => patch('notify_email', v)}
+            />
+            {[
+              ['sos', 'SOS / ล้มร่วง', 'เหตุการณ์วิกฤตจากสายรัด'],
+              ['geofence', 'ออกนอกพื้นที่ปลอดภัย', 'Geofence exit'],
+              ['tamper', 'ถอดสายรัด', 'Anti-removal / tamper'],
+              ['battery', 'แบตเตอรี่ต่ำ', 'เตือนก่อนอุปกรณ์ดับ'],
+              ['meds', 'ยาพลาดเวลา', 'จากข้อมูลกล่องยา'],
+              ['daily_summary', 'สรุปประจำวัน', 'ส่งสรุปการดูแล 1 ครั้งต่อวัน'],
+            ].map(([key, label, hint]) => (
+              <SettingsToggle
+                key={key}
+                checked={channels[key] !== false}
+                label={label}
+                hint={hint}
+                onChange={(v) => patchChannel(key, v)}
+              />
+            ))}
+          </div>
+        </section>
+
+        <div className="space-y-5">
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-bold text-slate-900"><UserRound size={18} className="text-slate-500" /> โปรไฟล์ผู้ดูแล</h2>
+              <span className="text-[11px] text-slate-400">ตั้งจากการ์ดบัญชีบนแดชบอร์ด</span>
+            </div>
+            <dl className="mt-4 space-y-2 text-sm">
+              <div className="flex justify-between gap-4"><dt className="text-slate-400">ชื่อ</dt><dd className="text-right font-semibold text-slate-800">{profile.full_name || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-400">อีเมลบัญชี</dt><dd className="text-right font-semibold text-slate-800">{email || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-400">เบอร์โทร</dt><dd className="text-right font-semibold text-slate-800">{profile.phone || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-400">ความสัมพันธ์</dt><dd className="text-right font-semibold text-slate-800">{profile.relationship_to_patient || '—'}</dd></div>
+            </dl>
+            <p className="mt-3 text-xs leading-5 text-slate-400">แก้ไขได้ที่การ์ด "บัญชีของฉัน" ในหน้าแดชบอร์ด (ปุ่มแก้โปรไฟล์)</p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-bold text-slate-900"><Watch size={18} className="text-slate-500" /> ผู้ป่วยและอุปกรณ์</h2>
+              <span className="text-[11px] text-slate-400">{patients.filter((p) => !p.is_archived).length} ราย · {activeDevices.length} เครื่อง</span>
+            </div>
+            {patients.filter((p) => !p.is_archived).length === 0 ? (
+              <p className="mt-4 text-sm text-slate-400">ยังไม่มีผู้ป่วย active — เพิ่มได้จากการ์ดผู้ป่วยบนแดชบอร์ด</p>
+            ) : (
+              <ul className="mt-4 space-y-2 text-sm">
+                {patients.filter((p) => !p.is_archived).map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2">
+                    <span className="font-semibold text-slate-800">{p.display_name}</span>
+                    <span className="text-xs text-slate-400">
+                      {devices.filter((d) => d.patient_id === p.id && !d.is_archived).map((d) => d.device_name).join(', ') || 'ยังไม่มีอุปกรณ์'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="mt-3 text-xs leading-5 text-slate-400">การลงทะเบียน/ลบอุปกรณ์ทำจากการ์ดอุปกรณ์บนแดชบอร์ด (เพิ่ม UI จัดการตรงนี้ในเฟสถัดไป)</p>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 font-bold text-slate-900"><Users size={18} className="text-slate-500" /> สมาชิกทีม</h2>
+              <span className="text-[11px] text-slate-400">{inviteCount > 0 ? `${inviteCount} คำเชิญรอ` : '—'}</span>
+            </div>
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              เชิญผู้ดูแลร่วมและจัดการวงดูแลจากการ์ดวงผู้ดูแลของแต่ละผู้ป่วย (ปุ่ม "วงผู้ดูแล" บนการ์ดผู้ป่วย)
+            </p>
+          </section>
+        </div>
+      </div>
+
+      <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
+        <div className="flex items-center justify-between">
+          <h2 className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck size={18} className="text-slate-500" /> ความเป็นส่วนตัวและข้อมูล</h2>
+        </div>
+        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+          <SettingsToggle checked={ui.show_hr !== false} label="แสดงหัวใจ (HR) บนแดชบอร์ด" onChange={(v) => patchUi('show_hr', v)} />
+          <SettingsToggle checked={ui.show_sleep !== false} label="แสดงข้อมูลการนอน" onChange={(v) => patchUi('show_sleep', v)} />
+          <SettingsToggle checked={ui.show_files !== false} label="แสดงไฟล์แนบผู้ป่วย" onChange={(v) => patchUi('show_files', v)} />
+        </div>
+        <p className="mt-3 text-xs leading-5 text-slate-400">
+          การเก็บสลับ/คืนผู้ป่วยและการลบข้อมูลยังทำจากการ์ดผู้ป่วย — ข้อมูล GPS/แผนที่เตรียม UI ความเป็นส่วนตัวเพิ่มในเฟส P2
+        </p>
+      </section>
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="refresh-control inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold"
+        >
+          {saving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />} บันทึกการตั้งค่า
+        </button>
+        {savedAt && <span className="text-xs text-emerald-700">บันทึกแล้ว {savedAt}</span>}
+      </div>
+
+      <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <span>GeoWrisX AD · Research prototype · R&amp;D / OCOP</span>
+        <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> การตั้งค่าเก็บต่อบัญชีผู้ใช้ใน Neon Postgres</span>
+      </footer>
+    </div>
+  );
+}
+
+function NavItem({ icon: Icon, label, active = false, count = 0, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      className={`nav-item flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm ${active ? 'is-active font-semibold' : 'text-slate-500'}`}
+    >
       <Icon size={17} />
       <span className="flex-1">{label}</span>
       {count > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-100 px-1.5 text-[10px] font-bold text-rose-700">{count}</span>}
-    </div>
+    </button>
   );
 }
 
