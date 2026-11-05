@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>GeoWrisX AD — Flowchart ระบบติดตามผู้ป่วย</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true, theme: 'default', fontSize: 14 });</script>
+<style>
+  body { font-family: system-ui, 'Noto Sans Thai', sans-serif; margin: 0; background: #f4f7f6; color: #122e36; }
+  header { padding: 20px 28px; background: #12303a; color: #fff; }
+  header h1 { margin: 0 0 6px; font-size: 18px; }
+  header p { margin: 0; opacity: .75; font-size: 13px; }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  section { background: #fff; border: 1px solid #dce6e3; border-radius: 14px; padding: 20px 24px; margin-bottom: 24px; overflow-x: auto; }
+  h2 { font-size: 15px; margin: 0 0 12px; color: #125e71; }
+</style>
+</head>
+<body>
+<header>
+  <h1>GeoWrisX AD — Flowchart: ระบบติดตามผู้ป่วย + ฮาร์ดแวร์ + SDLC</h1>
+  <p>ภาคแนบของ docs/ROADMAP-TRACKING.md — เลื่อนซ้ายขวาได้ในแต่ละบล็อก</p>
+</header>
+<main>
+
+<section>
+<h2>1) ทางเดินข้อมูลรวม: Hardware → Device Gateway → Neon → Webapp</h2>
+<pre class="mermaid">
+flowchart LR
+  subgraph HW["อุปกรณ์สวมใส่ / ติดตั้ง"]
+    WB["สายรัด สายรัด\n(MPU-6050, MAX30102, GPS,\nESP32-C3)"]
+    PB["กล่องยา\n(HX711 load cell,\nreed switch, RTC, buzzer)"]
+  end
+  subgraph FW["Firmware logic บนเครื่อง"]
+    S1["วัดเซนเซอร์: GPS / HR / เรียกซ้าย / น้ำหนักยา"]
+    S2["อัลกอริทึม: นอน 30วิ/epoch\nfall: freefall+impact+นิ่ง\nยา: W1-W2 >= 60% dose"]
+    S3["Store-and-forward\nring buffer NVM <= 2000 events\nclient_ref = uuid v4"]
+    S4["Batch <= 50 events\nrecorded_at เวลาเครื่อง"]
+  end
+  subgraph CLD["Cloudflare Pages Functions"]
+    GW["POST /api/device-event\nHMAC: DEVICE_INGEST_SECRET\ndedup + rate limit (KV)"]
+    EVAL["ประเมิน geofence\ncircle: haversine\npolygon: ray casting\nhysteresis 15% + 2จุด + 60s"]
+    ALR["INSERT alerts\nSOS / GEOFENCE_EXIT / TAMPER /\nPILL_NOT_TAKEN / FALL"]
+  end
+  DB[("Neon Postgres\ngps_points · sleep_nights\nhr_samples · med_intakes\nalerts · geofences")]
+  APP["Webapp (ต่อ login Clerk)\nแผนที่ Leaflet + last-known\nแถบ metric + care-log\napprove กล่องยา"]
+  EM["อีเมลแจ้งเตือน\nResend"]
+  WB --> S1 --> S2 --> S3 --> S4 --> GW
+  PB --> S2 --> S3
+  GW --> DB
+  GW --> EVAL --> ALR --> DB
+  DB --> APP
+  ALR --> EM --> APP
+</pre>
+</section>
+
+<section>
+<h2>2) อัลกอริทึม Geofencing (ฝั่ง backend ทุกจุด GPS)</h2>
+<pre class="mermaid">
+flowchart TD
+  A["จุด GPS ingres เข้ามา"] --> B{"รูปวงล้อม?"}
+  B -- circle --> C["ระยะ haversine <= radius_m"]
+  B -- polygon --> D["ray casting pointInPolygon"]
+  C --> E{"outside >= radius*1.15 ?"}
+  D --> E
+  E -- "ยังอยู่ในเขต" --> F["บันทึก state inside\nไม่แจ้งเตือน"]
+  E -- "พ้นเขต" --> G{"outsideStreak >= 2\nและระยะเวลา >= 60 s ?"}
+  G -- ไม่ใช่: กระพริบ GPS --> F2["รอจุดถัดไป (กัน GPS เด้ง)"]
+  G -- ใช่ --> H["INSERT alerts GEOFENCE_EXIT (critical)"]
+  H --> I["แจ้งสมาชิกตาม prefs\ndashboard + อีเมล (Resend)"]
+</pre>
+</section>
+
+<section>
+<h2>3) Fall Detection + Shift ออฟไลน์ (firmware สายรัด)</h2>
+<pre class="mermaid">
+flowchart TD
+  T0["loop อ่าน MPU |sqrt(ax^2+ay^2+az^2)|"] --> T1{"mag < 0.4g\nนาน 200 ms?"}
+  T1 -- ไม่ --> T0
+  T1 -- "ใช่ (freefall)" --> T2{"ใน 500ms\nmag > 2.5g?"}
+  T2 -- ไม่ --> T0
+  T2 -- "ใช่ (impact)" --> T3{"ต่อ 3 วินาที\nmag นิ่ง + ท่าเอียงผิดปกติ?"}
+  T3 -- ไม่ --> T9["สถานะกลับปกติ -> loop"]
+  T3 -- "ใช่ FALL_CONFIRMED" --> T4["ส่ง alert ก่อนทันที? - รอ 15 วินาที"]
+  T4 --> T5{"ผู้ป่วยกดฉันสบายดี?"}
+  T5 -- ใช่ --> T9
+  T5 -- "ไม่ / เงียบ" --> T6["ส่ง flush_now: SOS + จุด GPS ล่าสุด"]
+  T6 --> T7["alerts (critical) + อีเมล caregiver"]
+  T7 --> T8["และ / หรือ กล่องยา unlock หน้าจัดการ cave"]
+</pre>
+</section>
+
+<section>
+<h2>4) SDLC ต่อเฟส (Incremental / Agile)</h2>
+<pre class="mermaid">
+flowchart TD
+  P0["P0 รากฐาน: migration ตารางใหม่ (idempotent)\n gps_points · geofences · sleep_nights\n hr_samples · med_schedules · med_intakes · user_prefs"] --> P1["P1 เมนูตั้งค่า + prefs API"]
+  P1 --> P2["P2 GPS + Leaflet + geofence CRUD + GPS_BATCH"]
+  P2 --> P3["P3 care-log (sleep/ยา/HR) + schedule + cron ยาพลาด"]
+  P3 --> P4["P4 ฮาร์ดแวร์ต้นแบบ: wristband + pillbox"]
+  P4 --> P5["P5 Integration + QA: load test\nรายการรายการรいて permission\nsecurity review"]
+  P5 --> P6["P6 Go-live: ผู้ใช้จริง + ยินยอม + ติดตาม 7 วัน"]
+  P5 -. แก้บั๊ก/มีการแก้ระบบปรับ .-> P0
+
+  subgraph DOD["เกณฑ์จบทุกเฟส (DoD)"]
+    D1["build ผ่าน"]
+    D2["check-functions 20 ไฟล์"]
+    D3["a11y"]
+    D4["ระบุไม่มี Secret ลุแล้ว"]
+    D5["commit/push + deploy alias"]
+  end
+  DOD -.apply ทุกเฟส.-> P0
+</pre>
+</section>
+
+<section>
+<h2>5) บัตตรรายกระบวนคานัย (Approval กล่องยา — เดิมแต่จะตระเตำระเฟสใหม่)</h2>
+<pre class="mermaid">
+sequenceDiagram
+  participant P as ผู้ป่วย (กดปุ่มบนกล่องยา)
+  participant PB as กล่องยา ESP32
+  participant GW as device-event gateway
+  participant DB as Neon
+  participant CU as Caregiver (Dashboard)
+  PB ->> PB: ตรวจ BLE phone proximity (60 วิ)
+  PB ->> GW: PILLBOX_REQUEST {compartment, ble_proof}
+  GW ->> DB: INSERT pillbox_approvals (pending, expires 60s)
+  CU ->> GW: POST /api/approve-pillbox
+  GW ->> DB: approve_pillbox_request()  ยืนยันทีละขั้น
+  DB -->> GW: status=queued (30 วิ)
+  GW -->> PB: UNLOCK_COMPARTMENT
+  PB ->> GW: ยืนยัน unlock + MED_EVENT {W1-W2}
+  GW ->> DB: INSERT med_intakes ('taken')
+</pre>
+</section>
+
+</main>
+</body>
+</html>
