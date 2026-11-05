@@ -287,3 +287,136 @@ $$;
 -- insert into public.devices (patient_id, device_type, device_name)
 -- values ('<patient uuid>', 'wristband', 'Wristband A-01');
 -- =====================================================================
+
+-- =====================================================================
+-- Phase P0 — tracking foundation (idempotent, additive only)
+-- gps_points / geofences / sleep_nights / hr_samples / med_schedules /
+-- med_intakes / user_prefs
+-- =====================================================================
+
+-- --------------------------------------------------- user prefs (P1 settings)
+create table if not exists public.user_prefs (
+  user_id    text primary key,
+  prefs      jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now(),
+  constraint user_prefs_user_check check (char_length(user_id) between 1 and 64)
+);
+create index if not exists user_prefs_updated_idx
+  on public.user_prefs (updated_at desc);
+
+-- ---------------------------------------------------------------- gps points
+create table if not exists public.gps_points (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  device_id   uuid references public.devices(id) on delete set null,
+  lat         double precision not null check (lat between -90 and 90),
+  lng         double precision not null check (lng between -180 and 180),
+  acc_m       numeric(7,1),
+  speed_kmh   numeric(6,1),
+  recorded_at timestamptz not null,
+  ingested_at timestamptz not null default now(),
+  client_ref  text unique,
+  constraint gps_point_recorded_recent_check
+    check (recorded_at between (now() - interval '180 days') and (now() + interval '1 day'))
+);
+create index if not exists gps_points_patient_time_idx
+  on public.gps_points (patient_id, recorded_at desc);
+
+-- ------------------------------------------------------------------ geofences
+create table if not exists public.geofences (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  label       text not null check (char_length(btrim(label)) between 1 and 80),
+  kind        text not null default 'circle' check (kind in ('circle','polygon')),
+  center_lat  double precision check (center_lat between -90 and 90),
+  center_lng  double precision check (center_lng between -180 and 180),
+  radius_m    integer check (radius_m between 20 and 50000),
+  polygon     jsonb,
+  address     text,
+  is_active   boolean not null default true,
+  notify_all  boolean not null default true,
+  created_by  text not null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  constraint geofences_created_by_check check (char_length(created_by) between 1 and 64),
+  constraint geofence_shape_check check (
+    (kind = 'circle'
+      and center_lat is not null and center_lng is not null and radius_m is not null)
+    or (kind = 'polygon'
+      and polygon is not null and jsonb_array_length(polygon) between 3 and 64)
+  )
+);
+create index if not exists geofences_patient_active_idx
+  on public.geofences (patient_id, is_active);
+
+drop trigger if exists geofences_set_updated_at on public.geofences;
+create trigger geofences_set_updated_at
+  before update on public.geofences
+  for each row execute function public.set_updated_at();
+
+-- --------------------------------------------------------------- sleep nights
+create table if not exists public.sleep_nights (
+  id            uuid primary key default gen_random_uuid(),
+  patient_id    uuid not null references public.patients(id) on delete cascade,
+  device_id     uuid references public.devices(id) on delete set null,
+  night_date    date not null,
+  asleep_at     timestamptz not null,
+  woke_at       timestamptz not null,
+  duration_min  integer not null check (duration_min between 0 and 1440),
+  restless_min  integer not null default 0 check (restless_min between 0 and 1440),
+  awake_min     integer not null default 0 check (awake_min between 0 and 1440),
+  quality       text not null default 'unknown'
+                check (quality in ('good','fair','poor','unknown')),
+  client_ref    text unique,
+  created_at    timestamptz not null default now(),
+  constraint sleep_nights_window_check check (woke_at > asleep_at)
+);
+create index if not exists sleep_nights_patient_idx
+  on public.sleep_nights (patient_id, night_date desc);
+
+-- ----------------------------------------------------------------- hr samples
+create table if not exists public.hr_samples (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  device_id   uuid references public.devices(id) on delete set null,
+  bpm         integer not null check (bpm between 30 and 200),
+  spo2        integer check (spo2 between 50 and 100),
+  recorded_at timestamptz not null,
+  client_ref  text unique,
+  constraint hr_sample_recorded_recent_check
+    check (recorded_at between (now() - interval '90 days') and (now() + interval '1 day'))
+);
+create index if not exists hr_samples_patient_idx
+  on public.hr_samples (patient_id, recorded_at desc);
+
+-- -------------------------------------------------------------- med schedules
+create table if not exists public.med_schedules (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  label       text not null check (char_length(btrim(label)) between 1 and 120),
+  time_of_day time not null,
+  compart_no  smallint not null check (compart_no between 1 and 3),
+  days        integer[] not null default '{0,1,2,3,4,5,6}',
+  is_active   boolean not null default true,
+  created_at  timestamptz not null default now()
+);
+create index if not exists med_schedules_patient_idx
+  on public.med_schedules (patient_id, is_active, time_of_day);
+
+-- ----------------------------------------------------------------- med intakes
+create table if not exists public.med_intakes (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  pillbox_id  uuid references public.devices(id) on delete set null,
+  schedule_id uuid references public.med_schedules(id) on delete set null,
+  compart_no  smallint not null check (compart_no between 1 and 3),
+  action      text not null check (action in ('taken','missed','unscheduled')),
+  weight_g    numeric(6,1),
+  taken_at    timestamptz not null,
+  client_ref  text unique,
+  created_at  timestamptz not null default now(),
+  constraint med_intake_taken_recent_check
+    check (taken_at between (now() - interval '90 days') and (now() + interval '1 day'))
+);
+create index if not exists med_intakes_patient_idx
+  on public.med_intakes (patient_id, taken_at desc);
