@@ -752,9 +752,9 @@ function Dashboard() {
         <div className="mt-10 px-3 text-[11px] font-medium text-slate-400">เมนูหลัก</div>
         <nav className="mt-3 space-y-1">
           <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-          <NavItem icon={Watch} label="สายรัดและอุปกรณ์" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-          <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-          <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} active={view === 'dashboard'} onClick={() => setView('dashboard')} />
+          <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => setView('dashboard')} />
+          <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => setView('dashboard')} />
+          <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => setView('dashboard')} />
         </nav>
         <div className="mt-6 px-3 text-[11px] font-medium text-slate-400">บัญชีและการตั้งค่า</div>
         <nav className="mt-3 space-y-1">
