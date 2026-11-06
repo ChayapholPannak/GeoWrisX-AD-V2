@@ -7,6 +7,7 @@ import {
   X, XCircle,
 } from 'lucide-react';
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
+import TrackView from './TrackView.jsx';
 
 const emptyData = {
   patients: [],
@@ -100,7 +101,7 @@ function StatCard({ label, value, note, tone = 'blue' }) {
   );
 }
 
-function formatDate(value) {
+export function formatDate(value) {
   if (!value) return 'ยังไม่มีข้อมูล';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'ยังไม่มีข้อมูล';
@@ -753,6 +754,7 @@ function Dashboard() {
         <nav className="mt-3 space-y-1">
           <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
           <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => setView('dashboard')} />
+          <NavItem icon={MapPinned} label="ตำแหน่งและพื้นที่ปลอดภัย" active={view === 'track'} onClick={() => setView('track')} />
           <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => setView('dashboard')} />
           <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => setView('dashboard')} />
         </nav>
@@ -773,8 +775,8 @@ function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-800 lg:hidden"><HeartPulse size={19} /></div>
             <div>
-              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : 'ภาพรวม'}</span></div>
-              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : 'Caregiver Dashboard'}</div>
+              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : 'ภาพรวม'}</span></div>
+              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : 'Caregiver Dashboard'}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -1270,6 +1272,14 @@ function Dashboard() {
             <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> ข้อมูลทดสอบเท่านั้นจนกว่าจะผ่านการตรวจสอบความปลอดภัยและการทดสอบจริง</span>
           </footer>
         </div>
+        ) : view === 'track' ? (
+          <TrackView
+            patients={data.patients}
+            viewerUserId={data.viewer_user_id}
+            authedRequest={authedRequest}
+            onNotice={setNotice}
+            onBack={() => setView('dashboard')}
+          />
         ) : (
           <SettingsView
             profile={caregiverProfile}
@@ -1281,6 +1291,7 @@ function Dashboard() {
             saving={savingPrefs}
             onSavePrefs={savePrefs}
             onBack={() => setView('dashboard')}
+            onOpenTrack={() => setView('track')}
           />
         )}
       </main>
@@ -1306,7 +1317,7 @@ function SettingsToggle({ checked, label, hint, onChange }) {
   );
 }
 
-function SettingsView({ profile, email, patients, devices, inviteCount, prefs, saving, onSavePrefs, onBack }) {
+function SettingsView({ profile, email, patients, devices, inviteCount, prefs, saving, onSavePrefs, onBack, onOpenTrack }) {
   const [draft, setDraft] = useState(prefs);
   const [saveError, setSaveError] = useState('');
   const [savedAt, setSavedAt] = useState('');
@@ -1441,6 +1452,20 @@ function SettingsView({ profile, email, patients, devices, inviteCount, prefs, s
         </div>
       </div>
 
+      <section className="mt-5 rounded-2xl border border-teal-200 bg-teal-50/60 p-5 panel-shadow">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-slate-900"><MapPinned size={18} className="text-teal-700" /> พื้นที่ปลอดภัย (Geofences)</h2>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              จัดการวงล้อมจากหน้าแผนที่ — เพิ่มวงกลมรัศมีมากสุด 3 กม. แล้วระบบจะแจ้งเตือนเมื่อออกนอกเขต
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-teal-900">
+          เปิดหน้า <button type="button" onClick={onOpenTrack} className="font-semibold underline decoration-teal-500 underline-offset-2">ตำแหน่งและพื้นที่ปลอดภัย</button> เพื่อจัดการวงบนแผนที่
+        </p>
+      </section>
+
       <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck size={18} className="text-slate-500" /> ความเป็นส่วนตัวและข้อมูล</h2>
@@ -1489,7 +1514,7 @@ function NavItem({ icon: Icon, label, active = false, count = 0, onClick }) {
   );
 }
 
-function EmptyState({ icon: Icon, title, text }) {
+export function EmptyState({ icon: Icon, title, text }) {
   return (
     <div className="grid justify-items-center px-4 py-8 text-center">
       <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Icon size={20} /></div>

@@ -454,3 +454,33 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   .metric-cell { padding: 14px 16px; }
   .auth-intro { display: none; }
 }
+
+/* ============================================================
+   GeoWrisX P2 - tracking map pulse marker + skeleton
+   ============================================================ */
+.gx-map { z-index: 0; }
+.gx-pulse-marker { position: relative; }
+.gx-pulse-dot {
+  position: absolute; left: 50%; top: 50%;
+  width: 10px; height: 10px; margin: -5px 0 0 -5px;
+  background: #0d9488; border: 2px solid #fff; border-radius: 9999px;
+  box-shadow: 0 1px 4px rgba(13, 148, 136, .5);
+  z-index: 2;
+}
+.gx-pulse-ring {
+  position: absolute; left: 50%; top: 50%;
+  width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  border: 2px solid rgba(13, 148, 136, .55); border-radius: 9999px;
+  animation: gx-pulse 1.8s ease-out infinite;
+  z-index: 1;
+}
+@keyframes gx-pulse {
+  0%   { transform: scale(.55); opacity: .9; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+.skeleton {
+  background: linear-gradient(120deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  background-size: 200% 100%;
+  animation: gxskeleton 1.6s infinite;
+}
+@keyframes gxskeleton { to { background-position: -200% 0; } }
