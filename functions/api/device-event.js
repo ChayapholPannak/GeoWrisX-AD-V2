@@ -3,7 +3,7 @@ import { query, queryOne } from './_lib/db.js';
 import { buildAlertEmail, buildPillboxRequestEmail, sendEmail } from './_lib/email.js';
 import { HttpError, json, readJson, requireUuid, route } from './_lib/http.js';
 import { enforceRateLimit } from './_lib/ratelimit.js';
-import { haversineM, pointInPolygon } from './_lib/geo.js';
+import { circularGateState, haversineM, pointInPolygon } from './_lib/geo.js';
 
 const ALLOWED_EVENTS = new Set([
   'GEOFENCE_EXIT',
@@ -55,7 +55,7 @@ async function notify(env, patientId, builder, values) {
  * a breach. Repeats for the same fence are suppressed until the open alert is
  * acknowledged.
  */
-async function gateBreach(env, device, fence) {
+async function gateBreach(env, device, fence, waitUntil) {
   const history = await query(
     env,
     `select lat, lng, recorded_at
@@ -300,7 +300,7 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
       );
 
       for (const fence of fences) {
-        if (await gateBreach(env, device, fence)) gateAlerts += 1;
+        if (await gateBreach(env, device, fence, waitUntil)) gateAlerts += 1;
       }
     }
 
