@@ -67,7 +67,7 @@ create table if not exists public.alerts (
   id              uuid primary key default gen_random_uuid(),
   patient_id      uuid not null references public.patients(id) on delete cascade,
   device_id       uuid references public.devices(id) on delete set null,
-  alert_type      text not null check (alert_type in ('GEOFENCE_EXIT', 'TAMPER', 'LOW_BATTERY', 'BLE_DISCONNECTED', 'OTHER')),
+  alert_type      text not null check (alert_type in ('GEOFENCE_EXIT', 'TAMPER', 'LOW_BATTERY', 'BLE_DISCONNECTED', 'PILL_NOT_TAKEN', 'OTHER')),
   severity        text not null default 'warning' check (severity in ('info', 'warning', 'critical')),
   message         text not null check (char_length(btrim(message)) between 1 and 300),
   occurred_at     timestamptz not null default now(),
@@ -75,6 +75,15 @@ create table if not exists public.alerts (
   -- Clerk user id (previously auth.users uuid in the Supabase build)
   acknowledged_by text
 );
+
+-- -------------------------------------------------------------- alerts
+alter table public.alerts drop constraint if exists alerts_alert_type_check;
+alter table public.alerts
+  add constraint alerts_alert_type_check
+  check (alert_type in (
+    'GEOFENCE_EXIT', 'TAMPER', 'LOW_BATTERY', 'BLE_DISCONNECTED',
+    'PILL_NOT_TAKEN', 'OTHER'
+  ));
 
 -- -------------------------------------------------------- pillbox approvals
 create table if not exists public.pillbox_approvals (
