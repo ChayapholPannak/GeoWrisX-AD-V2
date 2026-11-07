@@ -42,8 +42,8 @@ export const onRequestGet = route(async ({ request, env }) => {
       env,
       `select id, label, kind, center_lat, center_lng, radius_m, polygon, address, is_active, notify_all
          from public.geofences
-        where patient_id = $1 and is_active = true
-        order by created_at desc`,
+        where patient_id = $1
+        order by is_active desc, created_at desc`,
       [patientId],
     ),
   ]);
@@ -53,9 +53,10 @@ export const onRequestGet = route(async ({ request, env }) => {
   const lastPoint = points.length ? points[points.length - 1] : null;
 
   // Status per active gate, evaluated solely from the last known position.
+  const activeFences = fences.filter((f) => f.is_active);
   const gateStatuses = [];
   if (lastPoint) {
-    for (const fence of fences) {
+    for (const fence of activeFences) {
       if (fence.kind === 'circle') {
         const distance = haversineM(lastPoint.lat, lastPoint.lng, fence.center_lat, fence.center_lng);
         gateStatuses.push({ id: fence.id, label: fence.label, kind: 'circle', distance_m: Math.round(distance), state: circularGateState(fence, distance) });
@@ -68,7 +69,7 @@ export const onRequestGet = route(async ({ request, env }) => {
   }
 
   const anyOutside = gateStatuses.some((g) => g.state === 'outside' || g.state === 'outside-hold');
-  const status = !lastPoint ? 'unknown' : fences.length === 0 ? 'no_geofence' : anyOutside ? 'outside' : 'inside';
+  const status = !lastPoint ? 'unknown' : activeFences.length === 0 ? 'no_geofence' : anyOutside ? 'outside' : 'inside';
 
   // Marker for the latest breach alert so the UI can show "ออกนอกเขตเมื่อ X".
   const latestExit = await queryOne(

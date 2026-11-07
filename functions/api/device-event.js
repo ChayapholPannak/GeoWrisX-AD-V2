@@ -13,7 +13,28 @@ const ALLOWED_EVENTS = new Set([
   'DEVICE_STATUS',
   'PILLBOX_REQUEST',
   'GPS_BATCH',
+  'SLEEP_SUMMARY',
+  'HR_BATCH',
+  'MED_EVENT',
 ]);
+
+/** Valid time-of-day string "HH:MM" (24 h). */
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+/** Validates an ISO timestamp inside the 90-days-back / 1-day-forward window. */
+function parseRecentIso(value, field) {
+  const at = new Date(value);
+  if (typeof value !== 'string' || Number.isNaN(at.getTime())
+    || at.getTime() < Date.now() - 90 * 86400000
+    || at.getTime() > Date.now() + 86400000) {
+    throw new HttpError(400, `${field} อยู่นอกช่วงที่ยอมรับ`);
+  }
+  return at.toISOString();
+}
+
+function parseClientRef(value) {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, 64) : null;
+}
 
 const ALERT_MESSAGES = {
   GEOFENCE_EXIT: 'สายรัดตรวจพบการออกนอกพื้นที่ที่กำหนด',
@@ -310,6 +331,149 @@ export const onRequestPost = route(async ({ request, env, waitUntil }) => {
       duplicates: points.length - inserted.length,
       geofence_alerts: gateAlerts,
     });
+  }
+
+  if (body.event_type === 'SLEEP_SUMMARY') {
+    // One night per device per date; retries upsert through client_ref.
+    const nightDate = typeof body.night_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.night_date)
+      ? body.night_date
+      : null;
+    if (!nightDate) throw new HttpError(400, 'night_date ต้องเป็นรูปแบบ YYYY-MM-DD');
+
+    const asleepAt = new Date(parseRecentIso(body.asleep_at, 'asleep_at'));
+    const wokeAt = new Date(parseRecentIso(body.woke_at, 'woke_at'));
+    const durationMin = Math.round((wokeAt - asleepAt) / 60000);
+    if (asleepAt.getTime() >= wokeAt.getTime() || durationMin > 1440) {
+      throw new HttpError(400, 'ช่วงเวลานอนไม่ถูกต้อง (ห้ามย้อนหรือเกิน 24 ชม.)');
+    }
+    const restlessMin = Number(body.restless_min ?? 0);
+    const awakeMin = Number(body.awake_min ?? 0);
+    if (!Number.isFinite(restlessMin) || restlessMin < 0 || restlessMin > durationMin
+      || !Number.isFinite(awakeMin) || awakeMin < 0 || awakeMin > durationMin) {
+      throw new HttpError(400, 'restless_min/awake_min ไม่ถูกต้อง');
+    }
+    const quality = ['good', 'fair', 'poor', 'unknown'].includes(body.quality)
+      ? body.quality
+      : 'unknown';
+
+    const night = await queryOne(
+      env,
+      `insert into public.sleep_nights
+         (patient_id, device_id, night_date, asleep_at, woke_at, duration_min,
+          restless_min, awake_min, quality, client_ref)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       on conflict (client_ref) do nothing
+       returning id, night_date, duration_min, quality`,
+      [device.patient_id, device.id, nightDate, asleepAt.toISOString(), wokeAt.toISOString(),
+       durationMin, Math.round(restlessMin), Math.round(awakeMin), quality, parseClientRef(body.client_ref)],
+    );
+
+    return json(201, { ok: true, accepted: night ? 1 : 0, duplicates: night ? 0 : 1, night });
+  }
+
+  if (body.event_type === 'HR_BATCH') {
+    const samples = Array.isArray(body.samples) ? body.samples : null;
+    if (!samples || samples.length === 0 || samples.length > 50) {
+      throw new HttpError(400, 'samples ต้องเป็น array ขนาด 1–50 จุด');
+    }
+
+    const inserted = [];
+    for (let i = 0; i < samples.length; i += 1) {
+      const s = samples[i];
+      const bpm = Number(s.bpm);
+      if (!Number.isInteger(bpm) || bpm < 30 || bpm > 200) {
+        throw new HttpError(400, `bpm จุดที่ ${i + 1} ต้องอยู่ระหว่าง 30–200`);
+      }
+      const spo2 = s.spo2 === undefined || s.spo2 === null ? null : Number(s.spo2);
+      if (spo2 !== null && (!Number.isInteger(spo2) || spo2 < 50 || spo2 > 100)) {
+        throw new HttpError(400, `spo2 จุดที่ ${i + 1} ต้องอยู่ระหว่าง 50–100`);
+      }
+      const row = await queryOne(
+        env,
+        `insert into public.hr_samples (patient_id, device_id, bpm, spo2, recorded_at, client_ref)
+         values ($1, $2, $3, $4, $5, $6)
+         on conflict (client_ref) do nothing
+         returning id, bpm, recorded_at`,
+        [device.patient_id, device.id, bpm, spo2, parseRecentIso(s.recorded_at, `recorded_at จุดที่ ${i + 1}`), parseClientRef(s.client_ref)],
+      );
+      if (row) inserted.push(row);
+    }
+
+    return json(201, { ok: true, accepted: inserted.length, duplicates: samples.length - inserted.length });
+  }
+
+  if (body.event_type === 'MED_EVENT') {
+    const compartment = Number(body.compartment_no);
+    if (!Number.isInteger(compartment) || compartment < 1 || compartment > 3) {
+      throw new HttpError(400, 'compartment_no ต้องอยู่ระหว่าง 1–3');
+    }
+    const action = ['taken', 'missed', 'unscheduled'].includes(body.action) ? body.action : null;
+    if (!action) throw new HttpError(400, 'action ต้องเป็น taken / missed / unscheduled');
+    const takenAt = parseRecentIso(body.taken_at, 'taken_at');
+    const weightG = body.weight_g === undefined || body.weight_g === null
+      ? null
+      : Math.round(Number(body.weight_g) * 10) / 10;
+
+    // Attach the matching schedule when the device names one, or auto-match the
+    // intake against a ±45-minute window of an active schedule (Bangkok time).
+    let scheduleId = null;
+    const takenMs = new Date(takenAt).getTime() + 7 * 3600_000; // shift to Asia/Bangkok wall clock
+    const takenMinutes = Math.floor((takenMs % 86400000) / 60000);
+
+    if (typeof body.schedule_id === 'string' && body.schedule_id.length === 36) {
+      const match = await queryOne(
+        env,
+        `select id from public.med_schedules
+          where id = $1 and patient_id = $2 and is_active = true
+          limit 1`,
+        [body.schedule_id, device.patient_id],
+      );
+      if (match) scheduleId = match.id;
+    }
+    if (!scheduleId) {
+      const schedules = await query(
+        env,
+        `select id, time_of_day
+           from public.med_schedules
+          where patient_id = $1 and is_active = true`,
+        [device.patient_id],
+      );
+      for (const s of schedules) {
+        const [hh, mm] = String(s.time_of_day).split(':').map(Number);
+        const schedMinutes = hh * 60 + mm;
+        if (Math.abs(takenMinutes - schedMinutes) <= 45) {
+          scheduleId = s.id;
+          break;
+        }
+      }
+    }
+
+    const intake = await queryOne(
+      env,
+      `insert into public.med_intakes
+         (patient_id, pillbox_id, schedule_id, compart_no, action, weight_g, taken_at, client_ref)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)
+       on conflict (client_ref) do nothing
+       returning id, action, taken_at`,
+      [device.patient_id, device.id, scheduleId, compartment, action, weightG, takenAt, parseClientRef(body.client_ref)],
+    );
+
+    // Device-reported missed doses raise the same alert the cron raises.
+    let alert = null;
+    if (intake && action === 'missed') {
+      alert = await queryOne(
+        env,
+        `insert into public.alerts (patient_id, device_id, alert_type, severity, message)
+         values ($1, $2, 'PILL_NOT_TAKEN', 'warning', $3)
+         returning id, message, occurred_at`,
+        [device.patient_id, device.id,
+         typeof body.message === 'string' && body.message.trim()
+           ? body.message.trim().slice(0, 300)
+           : `${device.patient_name} ไม่ได้ทานยา (ช่องที่ ${compartment})`],
+      );
+    }
+
+    return json(201, { ok: true, accepted: intake ? 1 : 0, duplicates: intake ? 0 : 1, alert });
   }
 
   const severity = body.event_type === 'TAMPER' || body.event_type === 'GEOFENCE_EXIT' ? 'critical' : 'warning';

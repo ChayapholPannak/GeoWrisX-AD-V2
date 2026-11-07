@@ -280,7 +280,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck size={18} className="text-slate-500" /> พื้นที่ปลอดภัย</h2>
-            <span className="text-[11px] text-slate-400">{geofences.length} วง active</span>
+            <span className="text-[11px] text-slate-400">{geofences.filter((g) => g.is_active).length} วง active</span>
           </div>
 
           {!canManage && (

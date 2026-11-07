@@ -2,12 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
-  Clock3, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
+  Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
   Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Trash2, UserRound, Users, Watch,
   X, XCircle,
 } from 'lucide-react';
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
 import TrackView from './TrackView.jsx';
+import CareLogView from './CareLogView.jsx';
 
 const emptyData = {
   patients: [],
@@ -407,6 +408,15 @@ function Dashboard() {
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
+  const ackAlert = useCallback(async (alertId) => {
+    try {
+      await authedRequest('alerts', { method: 'PATCH', query: { id: alertId }, body: { acknowledged: true } });
+      await loadDashboard(true);
+    } catch (e) {
+      setNotice({ kind: 'error', text: e.message || 'รับทราบการแจ้งเตือนไม่สำเร็จ' });
+    }
+  }, [authedRequest, loadDashboard]);
+
   const loadInvites = useCallback(async () => {
     // Optional feature: a failed invite lookup must not break the dashboard.
     try {
@@ -755,6 +765,7 @@ function Dashboard() {
           <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
           <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => setView('dashboard')} />
           <NavItem icon={MapPinned} label="ตำแหน่งและพื้นที่ปลอดภัย" active={view === 'track'} onClick={() => setView('track')} />
+          <NavItem icon={ClipboardList} label="บันทึกการดูแล" active={view === 'carelog'} onClick={() => setView('carelog')} />
           <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => setView('dashboard')} />
           <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => setView('dashboard')} />
         </nav>
@@ -775,8 +786,8 @@ function Dashboard() {
           <div className="flex items-center gap-3">
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-800 lg:hidden"><HeartPulse size={19} /></div>
             <div>
-              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : 'ภาพรวม'}</span></div>
-              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : 'Caregiver Dashboard'}</div>
+              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : 'ภาพรวม'}</span></div>
+              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : view === 'carelog' ? 'บันทึกการดูแล' : 'Caregiver Dashboard'}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -1259,6 +1270,14 @@ function Dashboard() {
                         </div>
                         <div className="mt-1 text-xs text-slate-400">{patientNames.get(alert.patient_id) || 'ผู้ป่วย'} · {formatDate(alert.occurred_at)}</div>
                       </div>
+                      {!alert.acknowledged_at && (
+                        <button
+                          onClick={() => ackAlert(alert.id)}
+                          className="mt-1 shrink-0 rounded-xl bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                        >
+                          รับทราบ
+                        </button>
+                      )}
                       <ChevronRight size={16} className="mt-2 shrink-0 text-slate-300" />
                     </div>
                   ))}
@@ -1274,6 +1293,14 @@ function Dashboard() {
         </div>
         ) : view === 'track' ? (
           <TrackView
+            patients={data.patients}
+            viewerUserId={data.viewer_user_id}
+            authedRequest={authedRequest}
+            onNotice={setNotice}
+            onBack={() => setView('dashboard')}
+          />
+        ) : view === 'carelog' ? (
+          <CareLogView
             patients={data.patients}
             viewerUserId={data.viewer_user_id}
             authedRequest={authedRequest}
