@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ChevronRight, Crosshair, MapPinned, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
+import { ChevronRight, Crosshair, MapPinned, Pentagon, RefreshCw, ShieldCheck, Trash2 } from 'lucide-react';
 import { EmptyState, formatDate } from './App.jsx';
 
 /** OpenStreetMap tiles — no API key, no cost. */
@@ -24,21 +24,60 @@ function pulseIcon() {
   });
 }
 
-function TrackMap({ points, lastPoint, geofences }) {
+function TrackMap({ points, lastPoint, geofences, drawing, drawPoints, onMapClick }) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
   const layerRef = useRef(null);
+  const drawLayerRef = useRef(null);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     mapRef.current = L.map(containerRef.current, { scrollWheelZoom: true });
     L.tileLayer(TILE_URL, { attribution: TILE_ATTR, maxZoom: 19 }).addTo(mapRef.current);
     layerRef.current = L.layerGroup().addTo(mapRef.current);
+    drawLayerRef.current = L.layerGroup().addTo(mapRef.current);
     return () => {
       mapRef.current.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Drawing mode: cursor crosshair + click-to-add-vertex.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return undefined;
+    if (!drawing) return undefined;
+    map.getContainer().classList.add('gx-drawing');
+    const handler = (e) => onMapClick([
+      Number(e.latlng.lat.toFixed(6)),
+      Number(e.latlng.lng.toFixed(6)),
+    ]);
+    map.on('click', handler);
+    return () => {
+      map.off('click', handler);
+      map.getContainer().classList.remove('gx-drawing');
+    };
+  }, [drawing, onMapClick]);
+
+  // Draft polygon preview (separate layer so real data stays untouched).
+  useEffect(() => {
+    const layers = drawLayerRef.current;
+    if (!layers) return;
+    layers.clearLayers();
+    if (!drawPoints || drawPoints.length === 0) return;
+    const coords = drawPoints;
+    coords.forEach((c) => L.circleMarker(c, {
+      radius: 4, color: '#b45309', weight: 2, fillColor: '#fbbf24', fillOpacity: 1,
+    }).addTo(layers));
+    if (coords.length >= 2) {
+      L.polyline(coords.concat(coords.length >= 3 ? [coords[0]] : []), {
+        color: '#b45309', weight: 2, dashArray: '6 6',
+      }).addTo(layers);
+    }
+    if (coords.length >= 3) {
+      L.polygon(coords, { color: '#b45309', weight: 2, fillColor: '#f59e0b', fillOpacity: 0.06, dashArray: '6 6' }).addTo(layers);
+    }
+  }, [drawPoints]);
 
   const dataKey = useMemo(() => JSON.stringify({
     p: points,
@@ -114,6 +153,45 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ label: '', address: '', center_lat: '', center_lng: '', radius_m: 150 });
   const [savingFence, setSavingFence] = useState(false);
+
+  // --- polygon drawing ---
+  const [drawing, setDrawing] = useState(false);
+  const [drawPoints, setDrawPoints] = useState([]);
+  const [polyLabel, setPolyLabel] = useState('');
+
+  function addDrawnPoint(point) {
+    setDrawPoints((current) => (current.length >= 64 ? current : [...current, point]));
+  }
+
+  function exitDrawing() {
+    setDrawing(false);
+    setDrawPoints([]);
+    setPolyLabel('');
+  }
+
+  async function savePolygon() {
+    if (drawPoints.length < 3 || !polyLabel.trim()) return;
+    setSavingFence(true);
+    try {
+      await authedRequest('geofences', {
+        method: 'POST',
+        body: {
+          patient_id: patientId,
+          label: polyLabel.trim(),
+          kind: 'polygon',
+          polygon: drawPoints,
+          notify_all: true,
+        },
+      });
+      exitDrawing();
+      onNotice({ kind: 'ok', text: 'เพิ่มพื้นที่แบบรูปหลายเหลี่ยมแล้ว' });
+      loadTrack(true);
+    } catch (e) {
+      onNotice({ kind: 'error', text: e.message || 'บันทึกพื้นที่ไม่สำเร็จ' });
+    } finally {
+      setSavingFence(false);
+    }
+  }
 
   const loadTrack = useCallback(async (quiet = false) => {
     if (!patientId) return;
@@ -272,7 +350,44 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
             {loading ? (
               <div className="gx-map skeleton grid h-[420px] w-full place-items-center rounded-xl border border-slate-200 text-sm text-slate-400">กำลังโหลดแผนที่…</div>
             ) : (
-              <TrackMap points={points} lastPoint={lastPoint} geofences={geofences.filter((g) => g.is_active)} />
+              <>
+                <TrackMap
+                  points={points}
+                  lastPoint={lastPoint}
+                  geofences={geofences.filter((g) => g.is_active)}
+                  drawing={drawing}
+                  drawPoints={drawPoints}
+                  onMapClick={addDrawnPoint}
+                />
+              {drawing ? (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+                  <span className="text-xs font-semibold text-amber-900">{drawPoints.length} จุด</span>
+                  <input
+                    aria-label="ชื่อพื้นที่หลายเหลี่ยม"
+                    placeholder="ชื่อพื้นที่ เช่น บ้าน, โรงเรียน"
+                    value={polyLabel}
+                    onChange={(e) => setPolyLabel(e.target.value)}
+                    className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  />
+                  <button
+                    onClick={savePolygon}
+                    disabled={drawPoints.length < 3 || !polyLabel.trim() || savingFence}
+                    className="refresh-control inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold disabled:opacity-50"
+                  >
+                    บันทึกพื้นที่ ({drawPoints.length} จุด)
+                  </button>
+                  <button onClick={() => setDrawPoints((p) => p.slice(0, -1))} disabled={drawPoints.length === 0} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50 disabled:opacity-40">
+                    เอาจุดล่าสุด
+                  </button>
+                  <button onClick={exitDrawing} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-50">
+                    ยกเลิก
+                  </button>
+                </div>
+              ) : null}
+                <div className="mt-2 text-[11px] text-slate-400">
+                  คลิกบนแผนที่แล้วเปิดโหมดวาด: กำหนดพื้นที่ที่ไม่ใช่วงกลม — 3–64 จุด
+                </div>
+              </>
             )}
           </div>
         </section>
@@ -290,9 +405,17 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
           )}
 
           {canManage && !formOpen && (
-            <button onClick={() => setFormOpen(true)} className="refresh-control mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
-              <Crosshair size={15} /> เพิ่มพื้นที่ปลอดภัย
-            </button>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => setFormOpen(true)} className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
+                <Crosshair size={15} /> วงกลม
+              </button>
+              <button
+                onClick={() => { drawing ? exitDrawing() : setDrawing(true); }}
+                className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold ${drawing ? 'bg-amber-600 text-white' : 'refresh-control'}`}
+              >
+                <Pentagon size={15} /> {drawing ? 'ยกเลิกการวาด' : 'วาดรูปหลายเหลี่ยม'}
+              </button>
+            </div>
           )}
 
           {formOpen && (
@@ -316,7 +439,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
                 </button>
                 <button onClick={() => setFormOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50">ยกเลิก</button>
               </div>
-              <p className="text-[11px] leading-4 text-slate-400">รูปร่างวงกลมก่อน — polygon จะเปิดให้วาดในรอบถัดไป</p>
+              <p className="text-[11px] leading-4 text-slate-400">ปุ่ม วงกลม = กรอพิกัด/รัศมี ส่วน "วาดรูปหลายเหลี่ยม" คลิกจุดบนแผนที่ทีละจุด</p>
             </div>
           )}
 
