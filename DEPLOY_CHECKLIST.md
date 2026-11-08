@@ -69,6 +69,7 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
   - [ ] `RESEND_API_KEY` (Secret)
   - [ ] `RESEND_FROM`
   - [ ] `DEVICE_INGEST_SECRET` (Secret, สุ่ม ≥ 32 ตัวอักษร)
+  - [ ] `CRON_SECRET` (Secret, สุ่ม ≥ 32 ตัวอักษร — ใช้โดย endpoint ยาพลาด เทียบกับ header `x-cron-secret`)
   - [ ] `ALERT_NOTIFY_TO` (ไม่บังคับ)
   - [ ] `ALLOWED_ORIGINS` (ไม่บังคับ)
 
@@ -90,7 +91,66 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - [ ] ส่ง `PILLBOX_REQUEST` ด้วย `ble_proximity_verified: false` → ปุ่มอนุมัติถูกปิด/ได้ 409
 - [ ] ตรวจว่า `device_commands` มีแถว `queued` หลังอนุมัติ
 
-## H. ความปลอดภัยก่อนใช้งานจริง
+## K. P3 — Care log (นอน/ชีพจร/ยา) ตรวจเพิ่มเติม (8 พ.ย. 2569)
+
+### ตารางใหม่ (idempotent จาก `db/schema.sql`)
+
+- [ ] `sleep_nights`, `hr_samples`, `med_schedules`, `med_intakes` มีครบ
+- [ ] constraint `alerts_alert_type_check` รวม `PILL_NOT_TAKEN`:
+      ```sql
+      select pg_get_constraintdef(oid) from pg_constraint where conname = 'alerts_alert_type_check';
+      ```
+      (ถ้ายังเป็นของเก่า — endpoint ยาพลาดจะ 500 ทันที แก้ด้วย drop + re-add ตาม schema)
+
+### Cron ยาพลาด (Cloudflare Worker)
+
+- [ ] Deploy worker: `workers/med-cron/` มี `wrangler.toml` ของตัวเอง
+      ```bash
+      # รันจากโฟลเดอร์อื่น (parent มี wrangler.jsonc ของโปรเจ็กต์อื่น ไม่ให้แตะ)
+      cd <repo>/workers/med-cron
+      npx wrangler deploy    # หรือ npx wrangler deploy --config <repo>/workers/med-cron/wrangler.toml
+      ```
+- [ ] ตั้ง secret ให้ worker: `npx wrangler secret put CRON_SECRET --name geowrisx-med-cron`
+      (ค่าต้องตรงกับ `CRON_SECRET` ของ Pages ที่เก็บไว้ใน `.dev.vars`)
+- [ ] Trigger `*/15 * * * *` ตรวจได้ที่ dashboard → worker → Triggers
+- [ ] ทดสอบมือได้: `node scripts/cron-missed.mjs` (อ่าน CRON_SECRET จาก `.dev.vars`, ไม่พิมพ์ค่า)
+      ผลลัพธ์รูปแบบ `{"ok":true,"checked":N,"created_alerts":X,"alerts":[...]}`
+
+### Endpoint ใหม่ที่ต้องมี
+
+| Endpoint | สิทธิ์ | หน้าที่ |
+|---|---|---|
+| `POST /api/device-event` (+ `SLEEP_SUMMARY`, `HR_BATCH`, `MED_EVENT`) | device secret | ingest นอน/ชีพจร/ยา |
+| `GET/POST/PATCH/DELETE /api/med-schedules` | primary จัดการ, member ดู | เวลายา |
+| `GET /api/care-log?patient_id=..&days=..` | member | ข้อมูลหลับ/ชีพจร/ยา + rollup |
+| `PATCH /api/alerts?id=..` | member | รับทราบ / เปิดซ้ำ |
+| `POST /api/cron/missed-meds` | `x-cron-secret` = `CRON_SECRET` | ยาพลาด → `PILL_NOT_TAKEN` |
+
+### กติกาเวลา
+
+- ทุกการคำนวณเวลายาเป็น **เวลาไทย (UTC+7)** — MED_EVENT auto-match ±45 นาที, cron รอ 60 นาทีสูงสุด 12 ชม.
+- MED กล่องยา auto-match ด้วย `compartment_no` 1–3 และ `schedule_id` (แนบเมื่อตรงเวลา)
+- Cron นับ "ขวางเตือนซ้ำ" ด้วย open alert + message prefix แบบเดียวกับ GEOFENCE_EXIT
+
+### ทดสอบ mock (ทั้งหมดผ่าน production 8 พ.ย. 2569)
+
+- [ ] `scripts/mock-care.mjs sleep|hr|med` — ingest ทั้ง 3 เหตุการณ์ HTTP 201
+- [ ] `scripts/mock-gps.mjs` — วง polygon: จุดใน = 0, จุดนอกติดกัน ≥2 จุดเว้น ≥60 วิ = `geofence_alerts:1`, รันซ้ำ dedupe = 0
+- [ ] หน้า "บันทึกการดูแล" แสดง 4 การ์ดสรุป + กราฟ 7 วัน + เพิ่ม/ลบเวลายาผ่าน UI
+- [ ] ปุ่ม "รับทราบ" บน dashboard: counter ลด, `acknowledged_at` บันทึกลง DB
+
+### วงเลิคีเฟอร์ (geofence) — เด็ดขาดใน TESTING
+
+- gate breach ต้องมีจุดนอกเว้นกัน ≥60 วิในไทม์ไลน์ถัดไป — mock สองรอบยิงแบบ timestamp ย้อนหลังสลับกันจะ reset streak เงียบ ๆ (เจอจริงรอบ 8 พ.ย.)
+- วง inactive: `/api/track` คืนทุกวง (แสดงบน UI + กลับมาเปิดได้) แต่การประเมิน breach ใช้ active เท่านั้น
+
+### ปุ่ม Google OAuth (ยังไม่แก้เสร็จ — ต้องทำใน dashboard)
+
+- อาการ: กด "ดำเนินการต่อด้วย Google" → ไปหน้า Google sign-in ได้จริง ✓ แต่พัง
+  `authorization_invalid` ที่ Clerk `oauth_callback` หลังเลือกบัญชี
+- สาเหตุ: config ฝั่ง Clerk SSO Connections (Google) ไม่ครบ/ไม่ตรง เห็นได้จาก client_id
+  `787459168867-...` กลายเป็น credentials แบบ custom ที่ Authorized redirect URI ไม่ตรง
+- ทางแก้ (คู่มือ): `docs/GOOGLE-OAUTH-SETUP.md`## H. ความปลอดภัยก่อนใช้งานจริง
 
 - [ ] ไม่มี secret ใดอยู่ใน `.env`, `VITE_*`, หรือ commit history
 - [ ] เปลี่ยน `DEVICE_INGEST_SECRET` จากค่า example
