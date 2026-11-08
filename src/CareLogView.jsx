@@ -34,6 +34,14 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, onN
   const current = activePatients.find((p) => p.id === patientId);
   const canManage = !!current && current.owner_id === viewerUserId;
 
+  // Dashboard data loads after first mount — adopt the first active patient
+  // once (and re-adopt if the selected patient leaves the list).
+  useEffect(() => {
+    if (!activePatients.length) return;
+    if (patientId && activePatients.some((p) => p.id === patientId)) return;
+    setPatientId(activePatients[0].id);
+  }, [patientId, activePatients]);
+
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ label: '', time_of_day: '08:00', compart_no: 1, days: [0, 1, 2, 3, 4, 5, 6] });
   const [savingSch, setSavingSch] = useState(false);

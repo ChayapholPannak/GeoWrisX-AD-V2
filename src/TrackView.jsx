@@ -127,6 +127,10 @@ function TrackMap({ points, lastPoint, geofences, drawing, drawPoints, onMapClic
     }
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [28, 28], maxZoom: 16 });
+    } else {
+      // No GPS/fence data yet — give the map a view so drawing and clicks work;
+      // the user can drag/zoom to their area before starting.
+      map.setView([13.7367, 100.5231], 13, { animate: false });
     }
   }, [dataKey]);
 
@@ -148,6 +152,14 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
   const [trackPatientId, setTrackPatientId] = useState('');
   const current = activePatients.find((p) => p.id === patientId);
   const canManage = !!current && current.owner_id === viewerUserId;
+
+  // Dashboard data loads after first mount — adopt the first active patient
+  // once (and re-adopt if the selected patient leaves the list).
+  useEffect(() => {
+    if (!activePatients.length) return;
+    if (patientId && activePatients.some((p) => p.id === patientId)) return;
+    setPatientId(activePatients[0].id);
+  }, [patientId, activePatients]);
 
   // --- geofence form ---
   const [formOpen, setFormOpen] = useState(false);

@@ -1,16 +1,69 @@
-# คู่มือแก้ปุ่ม "ดำเนินการต่อด้วย Google" — Clerk + Google OAuth
+# ปุ่ม "ดำเนินการต่อด้วย Google" — สรุปสถานะ
 
-สถานะตรวจสอบ 8 พ.ย. 2569 (อัตโนมัติผ่านเบราว์เซอร์ทดสอบ):
+## ✅ ผลลัพธ์ 8 พ.ย. 2569: ใช้ได้แล้ว
 
-- ปุ่มบนหน้า login **ทำงานได้ถึงจุดหนึ่งจริง** — กดแล้วถูกส่งไปหน้า
-  "Sign in to continue to Clerk" ของ Google ไม่ใช่ปุ่มตาย
-- error `authorization_invalid` เกิด **หลัง**เลือกบัญชี Google ตอนกลับเข้า
-  Clerk `oauth_callback` — ค่าที่ Clerk ส่งไป Google:
-  - `client_id = 787459168867-...apps.googleusercontent.com`
-    (เป็น **shared dev credentials ของ Clerk**, ไม่ใช่ credentials ที่เราสร้างเอง)
-  - `redirect_uri = https://clerk.shared.lcl.dev/v1/oauth_callback`
-- ดังนั้นโค้ดของแอป (App.jsx, mode `clerk_dev`) ไม่มีส่วนที่แก้ได้ในที่นี้ —
-  ทุก vector ของ fix อยู่บน Clerk Dashboard ตามขั้นด้านล่าง
+ทดสอบกดจริง end-to-end ผ่าน: กดปุ่ม → ยืนยันตัวตน Google (device prompt) →
+กลับมา Clerk callback → **ล็อกอินเข้า Dashboard สำเร็จ** (บัญชี `chayaphol524@gmail.com`,
+user `user_3LTLvSt...` ตรงบัญชีเดิมที่เคยใช้ password — Clerk รวมบัญชีให้เองด้วย email)
+
+- error `authorization_invalid` รอบก่อนเกิดจาก **state cookie ของ OAuth
+  หาย/ต่าง session** (third-party cookie หรือแท็บที่ page ค้าง session เดิม)
+  — หลังไปจบ flow ใหม่จนสำเร็จจึงกลับมาเสถียร
+- โค้ดไม่ต้องแก้อะไร; CSS ที่เคยซ่อนปุ่มถูกลบไปแล้ว (commit `59c5fa1`)
+
+### ถ้ากลับมาพังซ้ำ (เผื่อไว้)
+
+1. ลอง **Incognito** ของ Chrome ปกติก่อน — ที่พังมักมาจาก cookie แท็บเก่า
+2. ยังพัง → ทำ custom credentials ของเราเองตามขั้นด้านล่าง (ฟรี):
+
+## การตั้งค่า Google OAuth ของเราเอง (เมื่อมีปัญหาซ้ำ)
+
+1. **Google Cloud Console** → APIs & Services → **OAuth consent screen**
+   - User type: External, App name: GeoWrisX AD
+   - **Publishing status: "In production"** (ถ้าปล่อย "Testing" ต้องเพิ่มอีเมล
+     ผู้ดูแลทุกคนใน Test users ไม่อย่างนั้น Google ปฏิเสธบัญชีอื่น)
+   - scope พอแค่ `openid`, `...userinfo.email`, `...userinfo.profile`
+2. **Credentials → Create credentials → OAuth client ID → Web application**
+   - Authorized JavaScript origins: `https://geowrisx-ad-v2.pages.dev` (+ localhost dev)
+   - Authorized redirect URIs: **คัดลอกค่าจาก Clerk มาใส่พอดี** — Clerk Dashboard
+     → Configure → SSO Connections → Google จะแสดง redirect URI เดียวที่ต้องใช้
+     (รูปแบบ `https://clerk.<slug>.accounts.dev/v1/oauth_callback`)
+3. Clerk → SSO Connections → Google → **Use custom credentials** → paste
+   Client ID + Client Secret → Save
+4. ทดสอบ: กดปุ่ม Google → เลือกบัญชี → เข้า Dashboard ได้
+
+## ตารางเช็คเร็ว (ถ้าพังแล้วอยากหาว่าเพราะอะไร)
+
+| อาการ | ต้นเหตุที่เจอบ่อย |
+|---|---|
+| กดแล้วอยู่หน้า login เลย, ไม่ไป Google | Google connection ถูก disable ใน Clerk |
+| `Error 403: access_denied` ที่หน้า Google | Publisher status "Testing" และบัญชีไม่อยู่ใน Test users |
+| `authorization_invalid` หลังเลือกบัญชี | redirect URI ใน Google ไม่ตรงกับที่ Clerk ต้องการ / state cookie หาย (ลอง Incognito) |
+| Login ได้แต่เข้าเว็บไม่ได้ | Allowed origins ใน Clerk ไม่มีโดเมนนั้น |
+
+## บั๊บที่แก้แล้วใน rotation เดียวกัน (จบ 8 พ.ย.)
+
+- ปุ่ม manage ทหน้าแผนที่/care-log ขึ้น "โหมด companion" เมื่อโหลดหน้า Wise —
+  `patientId` state ตั้งครั้งเดียวตอน mount (ตอนนั้น patients ยัง `[]`) และไม่กลับมาเติม
+  → แก้ด้วย effect เติมตัวเลือกแรกทันทีที่ patients โหลด
+- แผนที่ว่าด้วยผู้ป่วยไม่มี GPS ไม่มีวง → Leaflet ไม่มี `setView` มัน **เมิน
+  ทุก click** รวมวาด polygon ทำงานแล้วเช็คได้จริง (`Set map center and zoom first`)
+  → แก้ด้วย default view Bangkok zoom 13 ทันทีที่ไม่มีข้อมูลพิกัด
+
+
+> ### ภาคผนวก: บันทึกการวินิจฉัยรอบแรก (ก่อนทดสอบสำเร็จ) — เก็บไว้อ้างอิง
+>
+> สถานะตรวจสอบ 8 พ.ย. 2569 (อัตโนมัติผ่านเบราว์เซอร์ทดสอบ):
+>
+> - ปุ่มบนหน้า login **ทำงานได้ถึงจุดหนึ่งจริง** — กดแล้วถูกส่งไปหน้า
+>   "Sign in to continue to Clerk" ของ Google ไม่ใช่ปุ่มตาย
+> - error `authorization_invalid` เกิด **หลัง**เลือกบัญชี Google ตอนกลับเข้า
+>   Clerk `oauth_callback` — ค่าที่ Clerk ส่งไป Google:
+>   - `client_id = 787459168867-...apps.googleusercontent.com`
+>     (เป็น **shared dev credentials ของ Clerk**, ไม่ใช่ credentials ที่เราสร้างเอง)
+>   - `redirect_uri = https://clerk.shared.lcl.dev/v1/oauth_callback`
+> - สรุปสุดท้าย: โค้ดไม่ผิด — เป็น state/cookie ของ session ทดสอบเอง,
+>   จบ flow ใหม่ในตัวเดิมแล้วสำเร็จ (ดูผลลัพธ์บนสุด)
 
 ---
 
@@ -68,7 +121,7 @@ redirect มา conditional ว่าเสีย cookie; เอาให้แ�
    credentials** → paste `Client ID` + `Client Secret` จาก Google Console → Save
 4. ทดสอบตาม "ขั้นแรก" บนเว็บจริง ปุ่มควร login ได้ตั้งแต่ครั้งแรก
 
-## เมื่อปรับ Google แล้วยังพัง — ตารางเช็คเร็ว
+## ขั้นแรก (หากรอบเก่ายังค้างอยู่): ทดสอบซ้ำในเบราว์เซอร์ปกติของคุณ
 
 | อาการ | ต้นเหตุที่เจอบ่อย |
 |---|---|

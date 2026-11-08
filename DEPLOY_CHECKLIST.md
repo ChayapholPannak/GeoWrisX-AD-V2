@@ -144,13 +144,12 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - gate breach ต้องมีจุดนอกเว้นกัน ≥60 วิในไทม์ไลน์ถัดไป — mock สองรอบยิงแบบ timestamp ย้อนหลังสลับกันจะ reset streak เงียบ ๆ (เจอจริงรอบ 8 พ.ย.)
 - วง inactive: `/api/track` คืนทุกวง (แสดงบน UI + กลับมาเปิดได้) แต่การประเมิน breach ใช้ active เท่านั้น
 
-### ปุ่ม Google OAuth (ยังไม่แก้เสร็จ — ต้องทำใน dashboard)
+### ปุ่ม Google OAuth (✅ ใช้ได้แล้ว 8 พ.ย. 2569)
 
-- อาการ: กด "ดำเนินการต่อด้วย Google" → ไปหน้า Google sign-in ได้จริง ✓ แต่พัง
-  `authorization_invalid` ที่ Clerk `oauth_callback` หลังเลือกบัญชี
-- สาเหตุ: config ฝั่ง Clerk SSO Connections (Google) ไม่ครบ/ไม่ตรง เห็นได้จาก client_id
-  `787459168867-...` กลายเป็น credentials แบบ custom ที่ Authorized redirect URI ไม่ตรง
-- ทางแก้ (คู่มือ): `docs/GOOGLE-OAUTH-SETUP.md`## H. ความปลอดภัยก่อนใช้งานจริง
+- ทดสอบกดจริงผ่าน: Google ยืนยันตัวตน (device prompt) → Clerk callback → เข้า Dashboard สำเร็จ
+  — บัญชีมีการ merge อัตโนมัติด้วย email (password + Google รวมเป็น user Clerk ตัวเดียว)
+- error `authorization_invalid` เดิมคือปัญหา state cookie ของ session ไม่ใช่ config;
+  ถ้าพังซ้ำให้ลอง Incognito ก่อน แล้วอ่าน `docs/GOOGLE-OAUTH-SETUP.md` (custom credentials)## H. ความปลอดภัยก่อนใช้งานจริง
 
 - [ ] ไม่มี secret ใดอยู่ใน `.env`, `VITE_*`, หรือ commit history
 - [ ] เปลี่ยน `DEVICE_INGEST_SECRET` จากค่า example
