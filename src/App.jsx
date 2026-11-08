@@ -348,6 +348,12 @@ function Dashboard() {
     return apiRequest(functionName, { ...options, token });
   }, [requireToken]);
 
+  // File downloads (CSV reports) — same auth flow, keeps the server-provided filename.
+  const authedDownload = useCallback(async (functionName, options = {}) => {
+    const token = await requireToken();
+    return apiDownload(functionName, { ...options, token });
+  }, [requireToken]);
+
   // View switching (dashboard / settings) — lightweight, no router.
   const [view, setView] = useState('dashboard');
 
@@ -801,6 +807,14 @@ function Dashboard() {
           </div>
         </header>
 
+        {notice && (
+          <div role="status" className={`mx-4 mt-5 flex items-start gap-2 rounded-xl border p-3.5 text-sm leading-6 sm:mx-7 lg:mx-9 xl:mx-auto xl:max-w-[1500px] xl:px-5 ${notice.kind === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
+            {notice.kind === 'error' ? <XCircle size={17} className="mt-1 shrink-0" /> : <CheckCircle2 size={17} className="mt-1 shrink-0" />}
+            <div className="flex-1">{notice.text}</div>
+            <button aria-label="ปิดข้อความ" onClick={() => setNotice(null)}><XCircle size={16} /></button>
+          </div>
+        )}
+
         {view === 'dashboard' ? (
         <div className="app-sheet mx-auto max-w-[1500px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
           <div className="app-fade flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -828,13 +842,6 @@ function Dashboard() {
             </div>
           )}
 
-          {notice && (
-            <div role="status" className={`mt-5 flex items-start gap-2 rounded-xl border p-3.5 text-sm leading-6 ${notice.kind === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}>
-              {notice.kind === 'error' ? <XCircle size={17} className="mt-1 shrink-0" /> : <CheckCircle2 size={17} className="mt-1 shrink-0" />}
-              <div className="flex-1">{notice.text}</div>
-              <button aria-label="ปิดข้อความ" onClick={() => setNotice(null)}><XCircle size={16} /></button>
-            </div>
-          )}
 
           {!loading && (urlInviteToken || pendingInvites.some((item) => !dismissedInvites.includes(item.invite_id))) && (
             <div className="mt-5 space-y-2">
@@ -1304,6 +1311,7 @@ function Dashboard() {
             patients={data.patients}
             viewerUserId={data.viewer_user_id}
             authedRequest={authedRequest}
+            authedDownload={authedDownload}
             onNotice={setNotice}
             onBack={() => setView('dashboard')}
           />

@@ -158,6 +158,28 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 - [ ] ทำความเข้าใจว่า prototype นี้ยังไม่ใช่อุปกรณ์การแพทย์ที่ผ่านการรับรอง
 
 
+## L. P4 — รายงาน CSV (8 พ.ย. 2569)
+
+### Endpoint
+
+- `GET /api/report?patient_id=...&days=1..90&kind=summary|events`
+  - guard: `authenticate` + `assertMember` (วงผู้ดูแลทุกคนดาวน์โหลดได้ เพราะ read-only)
+  - `kind=summary` — 1 แถว/วัน: `date, sleep_min, sleep_nights, hr_avg/min/max, meds_taken, meds_missed`
+    (ทาง SQL: GROUP BY `night_date` / `(ts at time zone 'Asia/Bangkok')::date`)
+  - `kind=events` — เหตุการณ์ดิบแยก section: sleep / hr / meds / alerts
+  - CSV: UTF-8 **BOM** (Excel อ่านไทยถูก), `\r\n`, `Content-Disposition` ส่ง `filename*=UTF-8''`
+    ชื่อไทย เช่น `รายงานสรุปรายวัน-ทดสอบ สายรัด-30วัน.csv`
+- ไฟล์: `functions/api/report.js` · UI ปุ่ม 2 อัน + select 7/14/30 วัน บนหน้า บันทึกการดูแล (`CareLogView.jsx`)
+  — ดาวน์โหลดผ่าน `apiDownload` (Blob + filename จาก header) เรียกโดย prop `authedDownload` ที่ App ส่งให้
+
+### ทดสอบผ่านแล้ว (production)
+
+- summary 30 วันได้แถวครบทุกวัน, ค่าคำนวณถูก (avg 81.67→82, min/max ตรง)
+- events: section sleep/hr/meds/alerts + เวลาเป็น `YYYY-MM-DD HH:mm` เวลาไทย
+- guard: ไม่ล็อกอิน 401 / ไม่ใช่ member 404 / ของตัวเอง 200
+- UI: กดปุ่ม → fetch (มี Authorization) → blob text/csv → ไฟล์ชื่อไทยถูกต้อง → notice โชว์บนหน้า carelog
+  - **แก้เพิ่มรอบนี้**: `notice` (toast) เดิม render เฉพาะ branch dashboard — ย้ายออกมาทำงานทุก view
+
 ## J. Auth ข้อควรรู้ (multi-caregiver, 3 พ.ย. 2569)
 
 - [ ] CLERK_AUTHORIZED_PARTIES ใน wrangler.toml (และช่อง Environment variables กรณี secret) ต้องมีต้นทางที่ใช้ล็อกอิน ตรงตัวทีละข้อ (ไม่รองรับ wildcard)

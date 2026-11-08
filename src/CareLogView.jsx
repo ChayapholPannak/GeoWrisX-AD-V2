@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  CheckCircle2, ChevronRight, Clock, HeartPulse, Moon,
+  CheckCircle2, ChevronRight, Clock, Download, HeartPulse, Moon,
   Plus, RefreshCw, Trash2, XCircle,
 } from 'lucide-react';
 import { EmptyState, formatDate } from './App.jsx';
@@ -24,7 +24,7 @@ function timeText(value) {
 }
 
 /** บันทึกการดูแล — sleep / HR / medication. Data: GET /api/care-log + /api/med-schedules CRUD. */
-export default function CareLogView({ patients, viewerUserId, authedRequest, onNotice, onBack }) {
+export default function CareLogView({ patients, viewerUserId, authedRequest, authedDownload, onNotice, onBack }) {
   const activePatients = patients.filter((p) => !p.is_archived);
   const [patientId, setPatientId] = useState(activePatients[0]?.id || '');
   const [log, setLog] = useState(null);
@@ -45,6 +45,33 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, onN
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState({ label: '', time_of_day: '08:00', compart_no: 1, days: [0, 1, 2, 3, 4, 5, 6] });
   const [savingSch, setSavingSch] = useState(false);
+
+  // CSV report export (P4) — daily summary or raw events, 7/14/30 day windows.
+  const [reportDays, setReportDays] = useState(7);
+  const [downloading, setDownloading] = useState('');
+
+  async function downloadReport(kind) {
+    if (!patientId) return;
+    setDownloading(kind);
+    try {
+      const { blob, filename } = await authedDownload('report', {
+        query: { patient_id: patientId, days: reportDays, kind },
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      onNotice({ kind: 'ok', text: `ดาวน์โหลดรายงาน ${reportDays} วันแล้ว — ${filename}` });
+    } catch (e) {
+      onNotice({ kind: 'error', text: e.message || 'ดาวน์โหลดรายงานไม่สำเร็จ' });
+    } finally {
+      setDownloading('');
+    }
+  }
 
   const loadLog = useCallback(async () => {
     if (!patientId) return;
@@ -150,6 +177,30 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, onN
           </select>
           <button onClick={loadLog} disabled={loading} className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> รีเฟรช
+          </button>
+          <select
+            value={reportDays}
+            onChange={(e) => setReportDays(Number(e.target.value))}
+            aria-label="ช่วงวันของรายงาน"
+            className="rounded-xl border border-slate-200 bg-white px-2.5 py-2.5 text-sm font-semibold text-slate-700"
+          >
+            {[7, 14, 30].map((d_) => <option key={d_} value={d_}>{d_} วัน</option>)}
+          </select>
+          <button
+            onClick={() => downloadReport('summary')}
+            disabled={downloading === 'summary'}
+            title="ไฟล์ CSV สรุปต่อวัน: การนอน ชีพจรเฉลี่ย การทานยา"
+            className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+          >
+            <Download size={15} className={downloading === 'summary' ? 'animate-pulse' : ''} /> สรุปรายวัน (CSV)
+          </button>
+          <button
+            onClick={() => downloadReport('events')}
+            disabled={downloading === 'events'}
+            title="ไฟล์ CSV รายเหตุการณ์: การนอน เหตุการณ์ยา แจ้งเตือน"
+            className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
+          >
+            <Download size={15} className={downloading === 'events' ? 'animate-pulse' : ''} /> เหตุการณ์ (CSV)
           </button>
           <button onClick={onBack} className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
             <ChevronRight size={15} className="rotate-180" /> กลับไปแดชบอร์ด
