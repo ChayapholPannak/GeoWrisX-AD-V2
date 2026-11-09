@@ -429,3 +429,25 @@ create table if not exists public.med_intakes (
 );
 create index if not exists med_intakes_patient_idx
   on public.med_intakes (patient_id, taken_at desc);
+
+-- =====================================================================
+-- Phase P4b — patient appointments (hospital visits, therapy, checkups).
+-- Reminds caregivers upcoming visits ("ตารางนัดหมาย"). Additive only.
+-- =====================================================================
+create table if not exists public.patient_appointments (
+  id          uuid primary key default gen_random_uuid(),
+  patient_id  uuid not null references public.patients(id) on delete cascade,
+  title       text not null check (char_length(btrim(title)) between 1 and 160),
+  place       text not null check (char_length(btrim(place)) between 1 and 160),
+  detail      text check (detail is null or char_length(detail) <= 400),
+  occurs_at   timestamptz not null,
+  status      text not null default 'scheduled'
+              check (status in ('scheduled', 'done', 'canceled')),
+  created_by  text not null,
+  created_at  timestamptz not null default now(),
+  constraint appointments_window_check
+    check (occurs_at between (now() - interval '180 days') and (now() + interval '365 days')),
+  constraint appointments_created_by_check check (char_length(created_by) between 1 and 64)
+);
+create index if not exists patient_appointments_patient_idx
+  on public.patient_appointments (patient_id, occurs_at desc);
