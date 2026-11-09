@@ -125,6 +125,14 @@ Checklist นี้ไล่จากศูนย์จนได้ URL ที�
 | `GET /api/care-log?patient_id=..&days=..` | member | ข้อมูลหลับ/ชีพจร/ยา + rollup |
 | `PATCH /api/alerts?id=..` | member | รับทราบ / เปิดซ้ำ |
 | `POST /api/cron/missed-meds` | `x-cron-secret` = `CRON_SECRET` | ยาพลาด → `PILL_NOT_TAKEN` |
+| `POST /api/cron/appointment-reminders` | `x-cron-secret` = `CRON_SECRET` | นัดใน 24 ชม. → alert `OTHER` (ล่วงหน้า 1 วัน / 3 ชม. · dedup ต่อนัดต่อรอบล่วงหน้า) + อีเมลทุกผู้ดูแล |
+| `GET /api/appointments` + `POST/PATCH/DELETE` | member ดู · primary จัดการ | ตารางนัดหมายโรงพยาบาลของผู้ป่วย |
+
+### กติกาเวลา (นัดหมาย — P4b)
+
+- เตือนผู้ดูแลอัตโนมัติ 2 รอบล่วงหน้า: **1 วัน** และ **3 ชม.** ก่อนเวลานัด — dedup ด้วย message ที่มี `[นัด <id 8 อักษร> · <lead>]` จนกว่า alert จะถูกรับทราบ
+- worker `workers/med-cron` (ทุก 15 นาที) ยิงทั้ง missed-meds และ appointment-reminders — หลัง deploy ต้อง redeploy worker: `npx wrangler deploy` ใน `workers/med-cron`
+- ทดสอบด้วยมือ: `node scripts/cron-appointments.mjs` (ต้องมีนัด status=`scheduled` ภายใน 24 ชม.)
 
 ### กติกาเวลา
 

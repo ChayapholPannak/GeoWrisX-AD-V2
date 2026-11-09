@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
-  Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
+  Activity, AlertTriangle, Archive, Battery, BellRing, CalendarCheck, CheckCircle2, ChevronRight,
   Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Menu, Paperclip,
   Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Trash2, UserRound, Users, Watch,
   X, XCircle,
@@ -9,6 +9,7 @@ import {
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
 import TrackView from './TrackView.jsx';
 import CareLogView from './CareLogView.jsx';
+import AppointmentsView from './AppointmentsView.jsx';
 
 const emptyData = {
   patients: [],
@@ -442,6 +443,28 @@ function Dashboard() {
 
   useEffect(() => { loadDashboard(); }, [loadDashboard]);
 
+  // ตารางนัดหมาย — โหลดเบา ๆ เพื่อ badge เมนู และแถบเตือนบนแดชบอร์ด
+  const [appointments, setAppointments] = useState([]);
+  const loadAppointments = useCallback(async () => {
+    const targets = (data.patients || []).filter((p) => !p.is_archived);
+    if (!targets.length) { setAppointments([]); return; }
+    const collected = [];
+    for (const patient of targets) {
+      try {
+        const result = await authedRequest('appointments', { query: { patient_id: patient.id } });
+        for (const apt of result.appointments || []) collected.push({ ...apt, patient_name: patient.display_name });
+      } catch {
+        // ทำงานต่อแบบเงียบ — ปุ่ม badge และแถบเตือนอาจยังว่าง
+      }
+    }
+    setAppointments(collected);
+  }, [authedRequest, data.patients]);
+
+  useEffect(() => { loadAppointments(); }, [loadAppointments]);
+  const upcomingAppointments = appointments
+    .filter((a) => a.status === 'scheduled' && new Date(a.occurs_at).getTime() > Date.now())
+    .sort((a, b) => new Date(a.occurs_at) - new Date(b.occurs_at));
+
   const ackAlert = useCallback(async (alertId) => {
     try {
       await authedRequest('alerts', { method: 'PATCH', query: { id: alertId }, body: { acknowledged: true } });
@@ -817,6 +840,7 @@ function Dashboard() {
                   <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => gotoView('dashboard')} />
                   <NavItem icon={MapPinned} label="ตำแหน่งและพื้นที่ปลอดภัย" active={view === 'track'} onClick={() => gotoView('track')} />
                   <NavItem icon={ClipboardList} label="บันทึกการดูแล" active={view === 'carelog'} onClick={() => gotoView('carelog')} />
+                  <NavItem icon={CalendarCheck} label="ตารางนัดหมาย" active={view === 'appoint'} count={upcomingAppointments.length} onClick={() => gotoView('appoint')} />
                   <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => gotoView('dashboard')} />
                   <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => gotoView('dashboard')} />
                 </nav>
@@ -832,8 +856,8 @@ function Dashboard() {
               </nav>
             </div>
             <div>
-              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : 'ภาพรวม'}</span></div>
-              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : view === 'carelog' ? 'บันทึกการดูแล' : 'Caregiver Dashboard'}</div>
+              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : view === 'appoint' ? 'ตารางนัดหมาย' : 'ภาพรวม'}</span></div>
+              <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : view === 'carelog' ? 'บันทึกการดูแล' : view === 'appoint' ? 'ตารางนัดหมาย' : 'Caregiver Dashboard'}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -978,6 +1002,25 @@ function Dashboard() {
               tone={pendingApprovals ? 'amber' : 'blue'}
             />
           </section>
+
+          {/* โต้งเตือนนัดหมายถัดไป — ผู้ดูแลพาผู้ป่วยไปโรงพยาบาลทันเวลา */}
+          <div className="app-fade-2 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#cfe0db] bg-gradient-to-br from-[#e3efec] to-[#f4f7f6] px-4 py-3">
+            <CalendarCheck size={20} className="text-[#125e71]" aria-hidden="true" />
+            {upcomingAppointments[0] ? (
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-slate-800">นัดหมายถัดไป · {upcomingAppointments[0].place} — {upcomingAppointments[0].title}</div>
+                <div className="text-xs text-slate-500">{formatDate(upcomingAppointments[0].occurs_at)} · ระบบจะแจ้งเตือนผู้ดูแลล่วงหน้า 1 วันและ 3 ชม. ก่อนเวลานัด</div>
+              </div>
+            ) : (
+              <div className="min-w-0">
+                <div className="text-sm font-semibold text-slate-800">ยังไม่มีนัดหมายที่ค้างอยู่</div>
+                <div className="text-xs text-slate-500">บันทึกนัดโรงพยาบาลของผู้ป่วยในตารางนัดหมาย ระบบจะเตือนผู้ดูแลล่วงหน้า 1 วันและ 3 ชม.</div>
+              </div>
+            )}
+            <button onClick={() => setView('appoint')} className="relative ml-auto inline-flex items-center gap-2 rounded-xl border border-[#c2d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#125e71] hover:bg-[#e3efec]">
+              ดูตารางนัดหมาย <span aria-hidden="true">→</span>
+            </button>
+          </div>
 
           <div className="mt-6 grid gap-5 xl:grid-cols-[1.05fr_.95fr]">
             <section className="app-fade-3 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
@@ -1345,6 +1388,15 @@ function Dashboard() {
             authedRequest={authedRequest}
             onNotice={setNotice}
             onBack={() => setView('dashboard')}
+          />
+        ) : view === 'appoint' ? (
+          <AppointmentsView
+            patients={data.patients}
+            viewerUserId={data.viewer_user_id}
+            authedRequest={authedRequest}
+            onNotice={setNotice}
+            onBack={() => setView('dashboard')}
+            onChanged={() => loadAppointments()}
           />
         ) : view === 'carelog' ? (
           <CareLogView
