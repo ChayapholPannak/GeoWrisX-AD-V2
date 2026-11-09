@@ -18,10 +18,17 @@ async function run(env) {
     console.error('[med-cron] CRON_SECRET missing');
     return;
   }
-  const response = await fetch('https://geowrisx-ad-v2.pages.dev/api/cron/missed-meds', {
-    method: 'POST',
-    headers: { 'x-cron-secret': env.CRON_SECRET },
-  });
-  const body = await response.text();
-  console.log(`[med-cron] HTTP ${response.status} ${(body || '').slice(0, 200)}`);
+  // ยิงสองงาน: ยาที่เลยเวลา (PILL_NOT_TAKEN) และเตือนนัดหมายล่วงหน้า 1 วัน / 3 ชม.
+  const targets = [
+    'https://geowrisx-ad-v2.pages.dev/api/cron/missed-meds',
+    'https://geowrisx-ad-v2.pages.dev/api/cron/appointment-reminders',
+  ];
+  await Promise.allSettled(targets.map(async (url) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'x-cron-secret': env.CRON_SECRET },
+    });
+    const body = await response.text();
+    console.log(`[med-cron] ${url.split('/api/cron/')[1]}: HTTP ${response.status} ${(body || '').slice(0, 200)}`);
+  }));
 }
