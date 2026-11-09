@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CheckCircle2, ChevronRight,
-  Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Paperclip,
+  Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Menu, Paperclip,
   Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Trash2, UserRound, Users, Watch,
   X, XCircle,
 } from 'lucide-react';
@@ -356,6 +356,34 @@ function Dashboard() {
 
   // View switching (dashboard / settings) — lightweight, no router.
   const [view, setView] = useState('dashboard');
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef(null);
+  const menuButtonRef = useRef(null);
+
+  // ปิดเมนู drop-down: คลิกนอกแผง หรือกด Esc (โฟกัสกลับที่ปุ่ม)
+  useEffect(() => {
+    if (!menuOpen) return;
+    function onPointerDown(e) {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target)) setMenuOpen(false);
+    }
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [menuOpen]);
+
+  function gotoView(next) {
+    setView(next);
+    setMenuOpen(false);
+  }
 
   // User preferences (Settings menu) persisted via /api/prefs.
   const [prefs, setPrefs] = useState({
@@ -758,39 +786,51 @@ function Dashboard() {
 
   return (
     <div className="app-shell min-h-screen text-slate-800">
-      <aside className="app-sidebar fixed inset-y-0 left-0 z-20 hidden flex-col px-4 py-5 lg:flex">
-        <div className="flex items-center gap-3 px-2">
-          <div className="brand-mark grid h-10 w-10 place-items-center"><HeartPulse size={21} /></div>
-          <div>
-            <div className="font-semibold text-slate-900">GeoWrisX <span>AD</span></div>
-            <div className="text-[11px] text-slate-400">Caregiver Console</div>
-          </div>
-        </div>
-        <div className="mt-10 px-3 text-[11px] font-medium text-slate-400">เมนูหลัก</div>
-        <nav className="mt-3 space-y-1">
-          <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => setView('dashboard')} />
-          <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => setView('dashboard')} />
-          <NavItem icon={MapPinned} label="ตำแหน่งและพื้นที่ปลอดภัย" active={view === 'track'} onClick={() => setView('track')} />
-          <NavItem icon={ClipboardList} label="บันทึกการดูแล" active={view === 'carelog'} onClick={() => setView('carelog')} />
-          <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => setView('dashboard')} />
-          <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => setView('dashboard')} />
-        </nav>
-        <div className="mt-6 px-3 text-[11px] font-medium text-slate-400">บัญชีและการตั้งค่า</div>
-        <nav className="mt-3 space-y-1">
-          <NavItem icon={Settings} label="ตั้งค่า" active={view === 'settings'} onClick={() => setView('settings')} />
-        </nav>
-        <div className="sidebar-note mt-auto p-4">
-          <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={17} /> Dual-Safety Matrix</div>
-          <p className="mt-2 text-xs leading-5">Geofencing · Anti-removal · Caregiver approval</p>
-          <div className="mt-3 px-2.5 py-2 text-[11px]">Research prototype</div>
-        </div>
-      </aside>
-
       <main className="app-main min-w-0" id="main">
         <a href="#main" className="skip-link">ข้ามไปยังเนื้อหาหลัก</a>
         <header className="app-topbar sticky top-0 z-10 flex items-center justify-between px-4 py-3 sm:px-7 lg:px-9">
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-800 lg:hidden"><HeartPulse size={19} /></div>
+          <div className="flex items-center gap-3" ref={menuWrapRef}>
+            <div className="button-panel-top">
+              <button
+                type="button"
+                ref={menuButtonRef}
+                className="hamburger"
+                aria-expanded={menuOpen}
+                aria-controls="app-menu-panel"
+                aria-label="เปิดเมนูหลักของคอนโซล"
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <Menu size={20} />
+              </button>
+
+              <nav className="menu-panel" id="app-menu-panel" hidden={!menuOpen} aria-label="เมนูหลักของคอนโซล">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="brand-mark grid h-10 w-10 place-items-center"><HeartPulse size={21} /></div>
+                  <div className="font-semibold">
+                    GeoWrisX <span>AD</span>
+                    <small className="block text-[11px]">Caregiver Console</small>
+                  </div>
+                </div>
+                <div className="mt-8 px-3 text-[11px] font-medium text-[#8fb0b4]">เมนูหลัก</div>
+                <nav className="mt-3 space-y-1">
+                  <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => gotoView('dashboard')} />
+                  <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => gotoView('dashboard')} />
+                  <NavItem icon={MapPinned} label="ตำแหน่งและพื้นที่ปลอดภัย" active={view === 'track'} onClick={() => gotoView('track')} />
+                  <NavItem icon={ClipboardList} label="บันทึกการดูแล" active={view === 'carelog'} onClick={() => gotoView('carelog')} />
+                  <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => gotoView('dashboard')} />
+                  <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => gotoView('dashboard')} />
+                </nav>
+                <div className="mt-6 px-3 text-[11px] font-medium text-[#8fb0b4]">บัญชีและการตั้งค่า</div>
+                <nav className="mt-3 space-y-1">
+                  <NavItem icon={Settings} label="ตั้งค่า" active={view === 'settings'} onClick={() => gotoView('settings')} />
+                </nav>
+                <div className="sidebar-note mt-5 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={17} /> Dual-Safety Matrix</div>
+                  <p className="mt-2 text-xs leading-5">Geofencing · Anti-removal · Caregiver approval</p>
+                  <div className="mt-3 px-2.5 py-2 text-[11px]">Research prototype</div>
+                </div>
+              </nav>
+            </div>
             <div>
               <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : 'ภาพรวม'}</span></div>
               <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : view === 'carelog' ? 'บันทึกการดูแล' : 'Caregiver Dashboard'}</div>

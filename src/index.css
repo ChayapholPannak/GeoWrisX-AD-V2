@@ -105,17 +105,41 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 /* ============================================================ shell  */
 .app-shell { background: var(--paper); }
 
-/* ---- รางข้างสีจมูกเขียวจาก "-" ของแผงซ้ายถือสถานะจริง ---- */
-.app-sidebar {
-  width: 228px;
-  background: #12303a;
-  border: 0;
-  color: #a8c3c6;
+/* ---- Hamburger + เมนู drop-down (แทนรางข้างแบบเดิม) ---- */
+.hamburger {
+  min-width: 44px; min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--muted);
+  display: grid; place-items: center;
+  transition: background 160ms var(--ease-out), color 160ms var(--ease-out);
 }
-.app-sidebar .brand-mark { background: rgb(255 255 255 / .12); color: #fff; }
-.app-sidebar .brand-mark + div,
-.app-sidebar .brand-mark + div span { color: #ffffff; }
-.app-sidebar .brand-mark + div span { color: var(--mint); }
+.hamburger:hover { background: var(--raised); color: var(--accent); }
+.button-panel-top { position: relative; }
+
+.menu-panel {
+  position: absolute; left: 0; top: calc(100% + 8px);
+  width: max-content; min-width: 260px; max-width: min(320px, calc(100vw - 24px));
+  max-height: calc(100vh - 96px); overflow: auto;
+  background: #12303a; color: #a8c3c6;
+  border: 1px solid rgb(255 255 255 / .14);
+  border-radius: 12px;
+  box-shadow: 0 18px 40px rgb(9 24 29 / .38);
+  padding: 18px 16px;
+  z-index: 60;
+  display: flex; flex-direction: column;
+  animation: menu-drop 200ms var(--ease-out) both;
+}
+/* กัน display:flex ทับ attribute hidden ของเบราว์เซอร์ */
+.menu-panel[hidden] { display: none; }
+@keyframes menu-drop { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .menu-panel { animation: none; } }
+.menu-panel .brand-mark { background: rgb(255 255 255 / .12); color: #fff; }
+.menu-panel .brand-mark + div,
+.menu-panel .brand-mark + div span { color: #ffffff; }
+.menu-panel .brand-mark + div span { color: var(--mint); }
+.menu-panel .brand-mark + div small { color: #9fbcbf; font-weight: 400; }
 .nav-item {
   border-radius: var(--radius-control);
   color: #9fbcbf;
@@ -435,7 +459,6 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 /* ============================================================ responsive  */
 @media (min-width: 1024px) {
   .app-main {
-    margin-left: 228px;
     min-height: 100vh;
     padding-right: 8px;
     padding-bottom: 8px;
