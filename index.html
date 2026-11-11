@@ -19,6 +19,17 @@
       rel="stylesheet"
     />
     <title>GeoWrisX AD | Caregiver Console</title>
+    <script>
+      // ใส่ธีมก่อนพรีนเทอร์แรกเพื่อไม่ให้หน้าแฟลชขาวในโหมดมืด (ตรรกะเดียวกับ App.jsx)
+      (function () {
+        try {
+          var theme = localStorage.getItem('gx-theme') || 'system';
+          var dark = theme === 'dark' || (theme !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+          if (dark) document.documentElement.classList.add('dark');
+          document.documentElement.dataset.theme = theme;
+        } catch (e) { /* localStorage ไม่พร้อมใช้ — อยู่โหมดสว่าง */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

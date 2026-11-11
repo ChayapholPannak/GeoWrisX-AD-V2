@@ -18,10 +18,13 @@
   --muted: #4f6a71;
   --accent: #125e71;         /* teal แบรนด์ — สืบต่อจากเวอร์ชันก่อน */
   --accent-strong: #0c4453;
+  --accent-soft: #cfe0db;    /* เส้นขอบโทน accent อ่อน */
+  --on-accent: #ffffff;      /* สีตัวอักษรบนพื้น accent */
   --mint: #7fc4bd;           /* เขียวอ่อนสำหรับ on-ink หน้า */
   --positive: #237a57;
   --negative: #c13b44;
   --warning: #8a5a00;
+  color-scheme: light;
   --radius-card: 10px;
   --radius-control: 8px;
   --radius-sheet: 18px;
@@ -36,18 +39,90 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ---- โหมดมืด: flip token ทั้งชุด — ส่วนประกอบที่อิง var() ปรับเอง ---- */
+.dark {
+  --paper: #0b1b21;
+  --surface: #13262d;
+  --raised: #182f37;
+  --active: #1e3a43;
+  --border: #28434c;
+  --rule: #1d363e;
+  --control: #34565f;
+  --text: #dcebe8;
+  --muted: #8fb0b4;
+  --accent: #6cc4d6;         /* teal สว่างขึ้นเพื่อเป็นสีตัวอักษร/ลิงก์บนพื้นมืด */
+  --accent-strong: #93d7e3;
+  --accent-soft: #2c4f59;
+  --on-accent: #062229;      /* ตัวอักษรบนพื้น accent สว่าง = หมึกเข้ม */
+  --mint: #7fc4bd;
+  --positive: #5fd49a;
+  --negative: #f2a3a8;
+  --warning: #e5bf72;
+  color: var(--text);
+  background: var(--paper);
+  color-scheme: dark;
+}
+
+/* Tailwind 4 คอมไพล์ยูทิลิตี้เป็น var(--color-*) — flip ค่าที่ใช้จริง
+   ในแอปเพื่อให้ slate/emerald/rose/amber ทั้งชุด (รวมตัวแปร /opacity) ปรับตาม */
+.dark {
+  --color-slate-50: #182a31;
+  --color-slate-100: #1c3138;
+  --color-slate-200: #28434c;
+  --color-slate-300: #3a5a63;
+  --color-slate-400: #7d9aa0;
+  --color-slate-500: #93b2b6;
+  --color-slate-600: #a9c3c2;
+  --color-slate-700: #c6d8d5;
+  --color-slate-800: #dbe9e6;
+  --color-slate-900: #eef6f3;
+  --color-slate-950: #f8fcfb;
+  --color-emerald-50: #122c26;
+  --color-emerald-200: #2c5847;
+  --color-emerald-700: #5fd49a;
+  --color-rose-50: #351d20;
+  --color-rose-200: #5b2f34;
+  --color-rose-700: #f2a3a8;
+  --color-rose-800: #f6b8bc;
+  --color-amber-50: #2f2312;
+  --color-amber-100: #382b16;
+  --color-amber-200: #4e3d1f;
+  --color-amber-700: #e5bf72;
+  --color-amber-800: #efd190;
+  --color-blue-50: #14262e;
+}
+
+/* bg-white ใช้เป็น "พื้นการ์ด" เท่านั้น — map ไป surface (ไม่ flip var --color-white
+   เพราะ text-white บนพื้นเข้มยังต้องขาว) */
+.dark .bg-white { background-color: var(--surface); }
+.dark .focus\:bg-white:focus { background-color: var(--surface); }
+
+/* ปุ่ม navy หลัก: โหมดมืดให้ hover สว่างขึ้นแทนที่จะมืดลง */
+.dark .app-shell button[class*="bg-[#1e3764]"]:hover { background: #33475e !important; }
+
+/* แผนที่ OSM ยังเป็น tile สว่าง — หรี่ลงเล็กน้อยให้กลมกลืนกับหน้ามืด */
+.dark .gx-map .leaflet-tile { filter: brightness(.85) saturate(.9); }
+
+/* ระหว่างสลับธีม: กด transition ทุกตัวเพื่อไม่ให้สีค่อย ๆ ไหลทั้งจอ */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+  transition: none !important;
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; min-height: 100vh; }
 button, input { font: inherit; }
 button { cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 button:disabled { cursor: not-allowed; opacity: .52; }
-::selection { background: #cfe4e6; }
+::selection { background: color-mix(in srgb, var(--accent) 26%, transparent); }
 
 /* ---- ท่าตอบการกดทันที (ถอดหลัก "answer on pointer-down") ---- */
 button:not(:disabled):active { transform: scale(.97); transition: transform 90ms ease-out; }
 
 :focus-visible {
-  outline: 3px solid rgb(18 94 113 / .45);
+  outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -56,7 +131,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .brand-mark {
   background: var(--accent);
   border-radius: var(--radius-control);
-  color: white;
+  color: var(--on-accent);
 }
 
 .setup-shell,
@@ -64,10 +139,10 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 
 .setup-context {
   border-radius: var(--radius-sheet);
-  background: #dfeae7;
+  background: var(--active);
   color: var(--text);
 }
-.setup-context .brand-mark { background: var(--accent); color: #fff; }
+.setup-context .brand-mark { background: var(--accent); color: var(--on-accent); }
 .setup-context span { color: var(--accent); }
 .setup-context p { color: var(--muted); }
 .setup-panel { border-color: var(--border); border-radius: var(--radius-sheet); }
@@ -98,7 +173,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .auth-shell input:focus,
 .setup-shell input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid rgb(18 94 113 / .16);
+  outline: 3px solid color-mix(in srgb, var(--accent) 16%, transparent);
   outline-offset: 1px;
 }
 
@@ -182,7 +257,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   padding: 8px 14px;
   margin: 10px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border-radius: var(--radius-control);
   font-size: 14px;
   text-decoration: none;
@@ -212,7 +287,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 }
 .app-sheet input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid rgb(18 94 113 / .16);
+  outline: 3px solid color-mix(in srgb, var(--accent) 16%, transparent);
   outline-offset: 1px;
 }
 
@@ -229,7 +304,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   color: var(--muted);
   transition: border-color 160ms var(--ease-out), background 160ms var(--ease-out);
 }
-.refresh-control:hover { border-color: var(--accent); color: var(--accent); background: #fbfdfd; }
+.refresh-control:hover { border-color: var(--accent); color: var(--accent); background: var(--raised); }
 
 /* ---- แถบตัวเลขสถานการณ์: จุดสำคัญเดียวของหน้า ---- */
 .metric-strip {
@@ -349,7 +424,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   position: absolute;
   top: 50%; left: -30%;
   width: 160%; height: 1px;
-  background: linear-gradient(90deg, transparent, rgb(18 94 113 / .4), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 40%, transparent), transparent);
   transform: translateY(-50%);
   animation: pulse-sweep 5s ease-in-out infinite;
 }
@@ -366,7 +441,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .patient-card { border: 1px solid var(--rule); background: var(--surface); }
 .patient-card:hover { border-color: var(--control); }
 
-.app-shell .bg-blue-50 { background-color: #e8f2f1 !important; }
+.app-shell .bg-blue-50 { background-color: var(--raised) !important; }
 .app-shell .text-blue-700,
 .app-shell .text-blue-800 { color: var(--accent) !important; }
 .app-shell .rounded-2xl { border-radius: var(--radius-card); }
@@ -508,7 +583,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   100% { transform: scale(2.6); opacity: 0; }
 }
 .skeleton {
-  background: linear-gradient(120deg, #f1f5f9, #e2e8f0, #f1f5f9);
+  background: linear-gradient(120deg, var(--raised), var(--active), var(--raised));
   background-size: 200% 100%;
   animation: gxskeleton 1.6s infinite;
 }

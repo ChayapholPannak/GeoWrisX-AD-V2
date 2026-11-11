@@ -179,7 +179,7 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
   const bkkMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'numeric' }).format(new Date());
   const monthCount = list.filter((a) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'numeric' }).format(new Date(a.occurs_at)) === bkkMonth).length;
 
-  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[#125e71] focus:outline-none';
+  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[var(--accent)] focus:outline-none';
 
   return (
     <div className="app-fade mx-auto app-sheet max-w-[1400px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
@@ -212,7 +212,7 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
       </div>
 
       {formOpen && (
-        <div className="mt-5 rounded-2xl border border-[#cfe0db] bg-gradient-to-br from-[#e3efec] to-white p-5">
+        <div className="mt-5 rounded-2xl border border-[var(--accent-soft)] bg-gradient-to-br from-[var(--active)] to-[var(--surface)] p-5">
           <h2 className="text-sm font-bold text-slate-900">{editingId ? 'แก้ไขนัดหมาย' : 'เพิ่มนัดหมายใหม่'}</h2>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <label className="block">
@@ -243,18 +243,18 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
 
       {/* นัดหมายถัดไป */}
       {next ? (
-        <section className="app-fade-1 mt-5 relative overflow-hidden rounded-2xl border border-[#cfe0db] bg-gradient-to-br from-[#e3efec] to-[#f7faf8] p-6">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[#125e71]/8" aria-hidden="true" />
+        <section className="app-fade-1 mt-5 relative overflow-hidden rounded-2xl border border-[var(--accent-soft)] bg-gradient-to-br from-[var(--active)] to-[var(--paper)] p-6">
+          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-[var(--accent)]/8" aria-hidden="true" />
           <div className="relative">
-            <div className="text-xs font-bold tracking-wide text-[#125e71]">นัดหมายถัดไป{next.patient_name ? ` · ${next.patient_name}` : ''}</div>
+            <div className="text-xs font-bold tracking-wide text-[var(--accent)]">นัดหมายถัดไป{next.patient_name ? ` · ${next.patient_name}` : ''}</div>
             <h2 className="mt-1 text-xl font-bold text-slate-950">{next.place} — {next.title}</h2>
             <div className="mt-3 grid gap-2 text-sm text-slate-600">
-              <div className="flex items-center gap-2"><CalendarCheck size={16} className="text-[#125e71]" /> {longDate(next.occurs_at)}</div>
-              <div className="flex items-center gap-2"><Clock size={16} className="text-[#125e71]" /> เวลา {clockText(next.occurs_at)} น.</div>
-              {next.detail && <div className="flex items-center gap-2"><MapPin size={16} className="text-[#125e71]" /> {next.detail}</div>}
+              <div className="flex items-center gap-2"><CalendarCheck size={16} className="text-[var(--accent)]" /> {longDate(next.occurs_at)}</div>
+              <div className="flex items-center gap-2"><Clock size={16} className="text-[var(--accent)]" /> เวลา {clockText(next.occurs_at)} น.</div>
+              {next.detail && <div className="flex items-center gap-2"><MapPin size={16} className="text-[var(--accent)]" /> {next.detail}</div>}
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <span className="rounded-full bg-[#125e71] px-3 py-1 text-xs font-bold text-white">{daysAhead(next.occurs_at)}</span>
+              <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-bold text-[var(--on-accent)]">{daysAhead(next.occurs_at)}</span>
               <span className="flex items-center gap-1.5 text-xs text-slate-500"><BellRing size={14} /> ระบบเตือนผู้ดูแลอัตโนมัติ ล่วงหน้า 1 วัน และ 3 ชม. ก่อนเวลานัด</span>
             </div>
           </div>
@@ -293,16 +293,16 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
         ) : (
           <div className="mt-4 space-y-2">
             {[next, ...upcoming].filter(Boolean).map((apt) => (
-              <div key={apt.id} className={`flex items-center gap-4 rounded-xl border p-3 ${apt.id === next?.id ? 'border-[#cfe0db] bg-gradient-to-r from-[#eef5f2] to-white' : 'border-slate-200/80'}`}>
-                <div className="w-14 flex-none rounded-xl bg-[#e3efec] py-2 text-center">
-                  <div className="text-lg font-bold leading-tight text-[#125e71]">{dayBadge(apt.occurs_at).day}</div>
+              <div key={apt.id} className={`flex items-center gap-4 rounded-xl border p-3 ${apt.id === next?.id ? 'border-[var(--accent-soft)] bg-gradient-to-r from-[var(--active)] to-[var(--surface)]' : 'border-slate-200/80'}`}>
+                <div className="w-14 flex-none rounded-xl bg-[var(--active)] py-2 text-center">
+                  <div className="text-lg font-bold leading-tight text-[var(--accent)]">{dayBadge(apt.occurs_at).day}</div>
                   <div className="text-[11px] text-slate-500">{dayBadge(apt.occurs_at).month}</div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">{apt.place}</span>
                     <span className="text-sm text-slate-600">— {apt.title}</span>
-                    <span className="rounded-full bg-[#125e71] px-2.5 py-0.5 text-[11px] font-bold text-white">{daysAhead(apt.occurs_at)}</span>
+                    <span className="rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--on-accent)]">{daysAhead(apt.occurs_at)}</span>
                   </div>
                   <div className="mt-0.5 text-xs text-slate-500">{longDate(apt.occurs_at)} {apt.detail ? `· ${apt.detail}` : ''}</div>
                 </div>

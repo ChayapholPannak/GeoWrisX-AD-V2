@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignIn, useAuth, useClerk, useUser } from '@clerk/react';
 import {
   Activity, AlertTriangle, Archive, Battery, BellRing, CalendarCheck, CheckCircle2, ChevronRight,
-  Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Menu, Paperclip,
-  Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Trash2, UserRound, Users, Watch,
+  Clock3, ClipboardList, Copy, Download, FileText, HeartPulse, LockKeyhole, LogOut, MapPinned, Menu, Moon, Paperclip,
+  Pencil, Plus, RefreshCw, RotateCcw, Save, Settings, ShieldCheck, Sun, Trash2, UserRound, Users, Watch,
   X, XCircle,
 } from 'lucide-react';
 import { apiDownload, apiRequest, apiUpload } from './lib/api.js';
@@ -21,6 +21,18 @@ const emptyData = {
 };
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+
+/** ธีมการแสดงผล: 'system' ตามระบบ / 'light' / 'dark' — เก็บใน localStorage */
+const THEME_KEY = 'gx-theme';
+const THEME_LABEL = { system: 'อัตโนมัติ', light: 'สว่าง', dark: 'มืด' };
+
+function systemPrefersDark() {
+  try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
+}
+
+function themeIsDark(theme, systemDark) {
+  return theme === 'dark' || (theme === 'system' && systemDark);
+}
 
 function AuthScreen() {
   return (
@@ -357,6 +369,32 @@ function Dashboard() {
 
   // View switching (dashboard / settings) — lightweight, no router.
   const [view, setView] = useState('dashboard');
+
+  // ---- ธีมสว่าง/มืด (index.html ใส่คลาส .dark ก่อน paint แล้ว — ที่นี่ sync ค่า + จัดการ transition) ----
+  const [theme, setTheme] = useState(() => {
+    try { return localStorage.getItem(THEME_KEY) || 'system'; } catch { return 'system'; }
+  });
+  const [systemDark, setSystemDark] = useState(systemPrefersDark);
+  const dark = themeIsDark(theme, systemDark);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem(THEME_KEY, theme); } catch { /* private mode — ใช้ค่าชั่วคราว */ }
+    const root = document.documentElement;
+    // กด transition ทุกตัวระหว่างสลับธีม เพื่อไม่ให้สีค่อย ๆ ไหลทั้งจอ
+    root.classList.add('theme-switching');
+    root.classList.toggle('dark', dark);
+    root.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0b1b21' : '#f4f7f6');
+    void root.getBoundingClientRect();
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')));
+  }, [theme, dark]);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef(null);
   const menuButtonRef = useRef(null);
@@ -865,6 +903,15 @@ function Dashboard() {
               <div className="max-w-48 truncate text-xs font-semibold text-slate-700">{displayName}</div>
               <div className="text-[11px] text-slate-400">บัญชีผู้ดูแล · Clerk</div>
             </div>
+            <button
+              type="button"
+              onClick={() => setTheme(dark ? 'light' : 'dark')}
+              aria-label={dark ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด'}
+              title={dark ? 'สลับไปโหมดสว่าง' : 'สลับไปโหมดมืด'}
+              className="hamburger"
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button onClick={logout} aria-label="ออกจากระบบ" className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
               <LogOut size={15} /><span className="hidden sm:inline">ออกจากระบบ</span>
             </button>
@@ -942,6 +989,35 @@ function Dashboard() {
 
           <section className="app-fade-1 mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
             <div className="flex items-start gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><Moon size={19} /></div>
+              <div>
+                <h2 className="font-bold text-slate-900">รูปแบบการแสดงผล</h2>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  เลือกโหมดสว่างหรือมืด — ค่า "อัตโนมัติ" จะตามการตั้งค่าอุปกรณ์ของคุณ
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="เลือกรูปแบบการแสดงผล">
+              {['system', 'light', 'dark'].map((option) => {
+                const icons = { system: RefreshCw, light: Sun, dark: Moon };
+                const Icon = icons[option];
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setTheme(option)}
+                    aria-pressed={theme === option}
+                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${theme === option ? 'border-[var(--accent)] bg-[var(--active)] text-[var(--accent-strong)]' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
+                  >
+                    <Icon size={15} /> {THEME_LABEL[option]}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="app-fade-1 mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
+            <div className="flex items-start gap-3">
               <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><UserRound size={19} /></div>
               <div>
                 <h2 className="font-bold text-slate-900">โปรไฟล์ผู้ดูแล</h2>
@@ -1004,8 +1080,8 @@ function Dashboard() {
           </section>
 
           {/* โต้งเตือนนัดหมายถัดไป — ผู้ดูแลพาผู้ป่วยไปโรงพยาบาลทันเวลา */}
-          <div className="app-fade-2 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#cfe0db] bg-gradient-to-br from-[#e3efec] to-[#f4f7f6] px-4 py-3">
-            <CalendarCheck size={20} className="text-[#125e71]" aria-hidden="true" />
+          <div className="app-fade-2 mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--accent-soft)] bg-gradient-to-br from-[var(--active)] to-[var(--paper)] px-4 py-3">
+            <CalendarCheck size={20} className="text-[var(--accent)]" aria-hidden="true" />
             {upcomingAppointments[0] ? (
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-slate-800">นัดหมายถัดไป · {upcomingAppointments[0].place} — {upcomingAppointments[0].title}</div>
@@ -1017,7 +1093,7 @@ function Dashboard() {
                 <div className="text-xs text-slate-500">บันทึกนัดโรงพยาบาลของผู้ป่วยในตารางนัดหมาย ระบบจะเตือนผู้ดูแลล่วงหน้า 1 วันและ 3 ชม.</div>
               </div>
             )}
-            <button onClick={() => setView('appoint')} className="relative ml-auto inline-flex items-center gap-2 rounded-xl border border-[#c2d2ce] bg-white px-3 py-2 text-xs font-semibold text-[#125e71] hover:bg-[#e3efec]">
+            <button onClick={() => setView('appoint')} className="relative ml-auto inline-flex items-center gap-2 rounded-xl border border-[var(--control)] bg-white px-3 py-2 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--active)]">
               ดูตารางนัดหมาย <span aria-hidden="true">→</span>
             </button>
           </div>
@@ -1656,7 +1732,7 @@ export default function App() {
 
   if (!isLoaded) {
     return (
-      <div className="grid min-h-screen place-items-center bg-[#f5f7fb]">
+      <div className="grid min-h-screen place-items-center bg-[var(--paper)]">
         <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">
           <RefreshCw className="animate-spin text-blue-700" size={18} />กำลังตรวจสอบเซสชัน…
         </div>
