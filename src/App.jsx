@@ -24,7 +24,6 @@ const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 /** ธีมการแสดงผล: 'system' ตามระบบ / 'light' / 'dark' — เก็บใน localStorage */
 const THEME_KEY = 'gx-theme';
-const THEME_LABEL = { system: 'อัตโนมัติ', light: 'สว่าง', dark: 'มืด' };
 
 function systemPrefersDark() {
   try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; }
@@ -391,7 +390,7 @@ function Dashboard() {
     root.classList.add('theme-switching');
     root.classList.toggle('dark', dark);
     root.dataset.theme = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0b1b21' : '#f4f7f6');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0a0c0d' : '#f4f7f6');
     void root.getBoundingClientRect();
     requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')));
   }, [theme, dark]);
@@ -986,35 +985,6 @@ function Dashboard() {
               ))}
             </div>
           )}
-
-          <section className="app-fade-1 mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
-            <div className="flex items-start gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-blue-700"><Moon size={19} /></div>
-              <div>
-                <h2 className="font-bold text-slate-900">รูปแบบการแสดงผล</h2>
-                <p className="mt-1 text-xs leading-5 text-slate-500">
-                  เลือกโหมดสว่างหรือมืด — ค่า "อัตโนมัติ" จะตามการตั้งค่าอุปกรณ์ของคุณ
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="เลือกรูปแบบการแสดงผล">
-              {['system', 'light', 'dark'].map((option) => {
-                const icons = { system: RefreshCw, light: Sun, dark: Moon };
-                const Icon = icons[option];
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setTheme(option)}
-                    aria-pressed={theme === option}
-                    className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors ${theme === option ? 'border-[var(--accent)] bg-[var(--active)] text-[var(--accent-strong)]' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
-                  >
-                    <Icon size={15} /> {THEME_LABEL[option]}
-                  </button>
-                );
-              })}
-            </div>
-          </section>
 
           <section className="app-fade-1 mt-6 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow sm:p-6">
             <div className="flex items-start gap-3">

@@ -39,21 +39,21 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ---- โหมดมืด: flip token ทั้งชุด — ส่วนประกอบที่อิง var() ปรับเอง ---- */
+/* ---- โหมดมืด: ดำสนิทโทนกลาง (แนว Discord) — flip token ทั้งชุด ---- */
 .dark {
-  --paper: #0b1b21;
-  --surface: #13262d;
-  --raised: #182f37;
-  --active: #1e3a43;
-  --border: #28434c;
-  --rule: #1d363e;
-  --control: #34565f;
-  --text: #dcebe8;
-  --muted: #8fb0b4;
-  --accent: #6cc4d6;         /* teal สว่างขึ้นเพื่อเป็นสีตัวอักษร/ลิงก์บนพื้นมืด */
-  --accent-strong: #93d7e3;
-  --accent-soft: #2c4f59;
-  --on-accent: #062229;      /* ตัวอักษรบนพื้น accent สว่าง = หมึกเข้ม */
+  --paper: #0a0c0d;
+  --surface: #141619;
+  --raised: #1b1e21;
+  --active: #23272b;
+  --border: #2b3036;
+  --rule: #1c2023;
+  --control: #3a4046;
+  --text: #e6eaec;
+  --muted: #9aa3a8;
+  --accent: #74cddd;         /* teal สว่างขึ้นเพื่อเป็นสีตัวอักษร/ลิงก์บนพื้นดำ */
+  --accent-strong: #a2dff0;
+  --accent-soft: #2a3339;
+  --on-accent: #052127;      /* ตัวอักษรบนพื้น accent สว่าง = หมึกเข้ม */
   --mint: #7fc4bd;
   --positive: #5fd49a;
   --negative: #f2a3a8;
@@ -66,30 +66,30 @@
 /* Tailwind 4 คอมไพล์ยูทิลิตี้เป็น var(--color-*) — flip ค่าที่ใช้จริง
    ในแอปเพื่อให้ slate/emerald/rose/amber ทั้งชุด (รวมตัวแปร /opacity) ปรับตาม */
 .dark {
-  --color-slate-50: #182a31;
-  --color-slate-100: #1c3138;
-  --color-slate-200: #28434c;
-  --color-slate-300: #3a5a63;
-  --color-slate-400: #7d9aa0;
-  --color-slate-500: #93b2b6;
-  --color-slate-600: #a9c3c2;
-  --color-slate-700: #c6d8d5;
-  --color-slate-800: #dbe9e6;
-  --color-slate-900: #eef6f3;
-  --color-slate-950: #f8fcfb;
-  --color-emerald-50: #122c26;
-  --color-emerald-200: #2c5847;
+  --color-slate-50: #17191c;
+  --color-slate-100: #1b1e21;
+  --color-slate-200: #2c3035;
+  --color-slate-300: #393e44;
+  --color-slate-400: #808a92;
+  --color-slate-500: #98a1a8;
+  --color-slate-600: #aeb6bc;
+  --color-slate-700: #ccd3d7;
+  --color-slate-800: #e2e7ea;
+  --color-slate-900: #f2f5f7;
+  --color-slate-950: #ffffff;
+  --color-emerald-50: #10201c;
+  --color-emerald-200: #29443b;
   --color-emerald-700: #5fd49a;
-  --color-rose-50: #351d20;
-  --color-rose-200: #5b2f34;
+  --color-rose-50: #26191b;
+  --color-rose-200: #45272b;
   --color-rose-700: #f2a3a8;
   --color-rose-800: #f6b8bc;
-  --color-amber-50: #2f2312;
-  --color-amber-100: #382b16;
-  --color-amber-200: #4e3d1f;
+  --color-amber-50: #221b0f;
+  --color-amber-100: #282012;
+  --color-amber-200: #3b3020;
   --color-amber-700: #e5bf72;
   --color-amber-800: #efd190;
-  --color-blue-50: #14262e;
+  --color-blue-50: #171a1e;
 }
 
 /* bg-white ใช้เป็น "พื้นการ์ด" เท่านั้น — map ไป surface (ไม่ flip var --color-white
