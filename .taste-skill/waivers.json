@@ -1,0 +1,7 @@
+[
+  { "check": "hero-screen", "target": "section.grid.place-items-center", "reason": "แอปคอนโซล (kind: software app) ไม่ใช่หน้าการตลาด — จอ login เป็น utility screen ไม่มี hero เต็มจอ ตัวตรวจออกแบบมาสำหรับ landing page" },
+  { "check": "container", "target": "page", "reason": "แอปใช้ layout แบบ dashboard ของตน (app-sheet max-w-1500px) ไม่ใช่ระบบ .wrap ของคิตสำหรับเว็บการตลาด — ไม่แก้เพราะจะทลาย layout แอป" },
+  { "check": "one-section", "target": "section.grid.place-items-center", "reason": "กฎ 'หนึ่ง section ต่อจอ' ใช้กับเว็บการตลาด — แอป scroll ตามเนื้อหาของข้อมูลผู้ป่วย" },
+  { "check": "contrast", "target": "div.cl-footer.cl-internal-1move57", "reason": "แถบเตือนส้มคือ Clerk development-instance banner ซึ่งโผล่เฉพาะ local (pk_test) — production ใช้ live key และตรวจแล้วไม่มีแถบนี้" },
+  { "check": "container-edges", "target": "div.cl-card.cl-signIn-start > div.cl-header.cl-internal-1f4p2mz", "reason": "การจัดกึ่งกลาง h1 ภายในการ์ด Clerk เป็น component สำเร็จรูปของ Clerk ที่เราฝังมา ไม่ใช่หน้าที่ทำตามระบบ .wrap" }
+]

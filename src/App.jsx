@@ -35,7 +35,8 @@ function themeIsDark(theme, systemDark) {
 
 function AuthScreen() {
   return (
-    <main className="auth-shell min-h-screen grid lg:grid-cols-[1.05fr_.95fr]">
+    <main className="auth-shell min-h-screen grid lg:grid-cols-[1.05fr_.95fr]" id="main">
+      <a href="#main" className="skip-link">ข้ามไปยังเนื้อหาหลัก</a>
       <section className="auth-intro relative hidden overflow-hidden p-12 lg:flex lg:flex-col lg:justify-between">
         <div className="relative flex items-center gap-3">
           <div className="brand-mark grid h-11 w-11 place-items-center"><HeartPulse size={23} /></div>
@@ -85,7 +86,7 @@ function AuthScreen() {
               }}
             />
           </div>
-          <p className="mt-8 border-t border-slate-100 pt-5 text-center text-xs leading-5 text-slate-400">
+          <p className="mt-8 border-t border-slate-100 pt-5 text-center text-xs leading-5 text-slate-500">
             ข้อมูลผู้ป่วยและข้อมูลตำแหน่งเป็นข้อมูลอ่อนไหว ควรใช้เฉพาะข้อมูลทดสอบจนกว่าจะตรวจสอบความปลอดภัยและได้รับความยินยอมครบถ้วน
           </p>
         </div>
@@ -145,7 +146,7 @@ function PatientFiles({ files, canManage = false, uploading, downloadingId, dele
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
           <Paperclip size={13} /> ไฟล์แนบผู้ป่วย
-          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500">{files.length}</span>
+          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-slate-500">{files.length}</span>
         </div>
         {canManage ? (
           <label className={`inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-50 ${uploading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
@@ -163,22 +164,22 @@ function PatientFiles({ files, canManage = false, uploading, downloadingId, dele
             />
           </label>
         ) : (
-          <span className="text-[10px] leading-4 text-slate-400">อัปโหลด/ลบได้เฉพาะเจ้าของหลัก</span>
+          <span className="text-xs leading-4 text-slate-500">อัปโหลด/ลบได้เฉพาะเจ้าของหลัก</span>
         )}
       </div>
 
       {files.length === 0 ? (
-        <p className="mt-2 text-[11px] leading-5 text-slate-400">
+        <p className="mt-2 text-xs leading-5 text-slate-500">
           แนบผลตรวจ เลขที่ใบสั่งยา หรือเอกสารยินยอมได้ (สูงสุด 25 MB ต่อไฟล์)
         </p>
       ) : (
         <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto pr-1">
           {files.map((file) => (
             <li key={file.id} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-2">
-              <FileText size={14} className="shrink-0 text-slate-400" />
+              <FileText size={14} className="shrink-0 text-slate-500" />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-xs font-medium text-slate-700">{file.file_name}</div>
-                <div className="text-[10px] text-slate-400">
+                <div className="text-xs text-slate-500">
                   {formatBytes(file.size_bytes)} · {formatDate(file.created_at)}
                 </div>
               </div>
@@ -265,14 +266,14 @@ function WelcomeFlow({ onDone }) {
           ))}
         </div>
         <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-          <button type="button" onClick={onDone} className="px-2 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600">
+          <button type="button" onClick={onDone} className="px-2 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-600">
             ข้ามคำแนะนำ
           </button>
           <button
             ref={primaryRef}
             type="button"
             onClick={() => (last ? onDone() : setStep(step + 1))}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-[#1e3764] px-4 py-2 text-sm font-semibold text-white hover:bg-[#28477e]"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)]"
           >
             {last ? 'เริ่มใช้งาน' : 'ถัดไป'}<ChevronRight size={15} />
           </button>
@@ -868,10 +869,10 @@ function Dashboard() {
                   <div className="brand-mark grid h-10 w-10 place-items-center"><HeartPulse size={21} /></div>
                   <div className="font-semibold">
                     GeoWrisX <span>AD</span>
-                    <small className="block text-[11px]">Caregiver Console</small>
+                    <small className="block text-xs">Caregiver Console</small>
                   </div>
                 </div>
-                <div className="mt-8 px-3 text-[11px] font-medium text-[#8fb0b4]">เมนูหลัก</div>
+                <div className="mt-8 px-3 text-xs font-medium menu-label">เมนูหลัก</div>
                 <nav className="mt-3 space-y-1">
                   <NavItem icon={Activity} label="ภาพรวมระบบ" active={view === 'dashboard'} onClick={() => gotoView('dashboard')} />
                   <NavItem icon={Watch} label="สายรัดและอุปกรณ์" onClick={() => gotoView('dashboard')} />
@@ -881,26 +882,26 @@ function Dashboard() {
                   <NavItem icon={BellRing} label="การแจ้งเตือน" count={unacknowledgedAlerts} onClick={() => gotoView('dashboard')} />
                   <NavItem icon={LockKeyhole} label="อนุมัติกล่องยา" count={pendingApprovals} onClick={() => gotoView('dashboard')} />
                 </nav>
-                <div className="mt-6 px-3 text-[11px] font-medium text-[#8fb0b4]">บัญชีและการตั้งค่า</div>
+                <div className="mt-6 px-3 text-xs font-medium menu-label">บัญชีและการตั้งค่า</div>
                 <nav className="mt-3 space-y-1">
                   <NavItem icon={Settings} label="ตั้งค่า" active={view === 'settings'} onClick={() => gotoView('settings')} />
                 </nav>
                 <div className="sidebar-note mt-5 p-4">
                   <div className="flex items-center gap-2 text-sm font-semibold"><ShieldCheck size={17} /> Dual-Safety Matrix</div>
                   <p className="mt-2 text-xs leading-5">Geofencing · Anti-removal · Caregiver approval</p>
-                  <div className="mt-3 px-2.5 py-2 text-[11px]">Research prototype</div>
+                  <div className="mt-3 px-2.5 py-2 text-xs">Research prototype</div>
                 </div>
               </nav>
             </div>
             <div>
-              <div className="text-xs text-slate-400">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : view === 'appoint' ? 'ตารางนัดหมาย' : 'ภาพรวม'}</span></div>
+              <div className="text-xs text-slate-500">พื้นที่ผู้ดูแล / <span className="text-slate-600">{view === 'settings' ? 'ตั้งค่า' : view === 'track' ? 'แผนที่ตำแหน่ง' : view === 'carelog' ? 'บันทึกการดูแล' : view === 'appoint' ? 'ตารางนัดหมาย' : 'ภาพรวม'}</span></div>
               <div className="text-sm font-semibold text-slate-900">{view === 'settings' ? 'การตั้งค่าและจัดการบัญชี' : view === 'track' ? 'ตำแหน่งและพื้นที่ปลอดภัย' : view === 'carelog' ? 'บันทึกการดูแล' : view === 'appoint' ? 'ตารางนัดหมาย' : 'Caregiver Dashboard'}</div>
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden text-right sm:block">
               <div className="max-w-48 truncate text-xs font-semibold text-slate-700">{displayName}</div>
-              <div className="text-[11px] text-slate-400">บัญชีผู้ดูแล · Clerk</div>
+              <div className="text-xs text-slate-500">บัญชีผู้ดูแล · Clerk</div>
             </div>
             <button
               type="button"
@@ -962,7 +963,7 @@ function Dashboard() {
                     <div className="mt-0.5 text-xs leading-5 text-blue-800/80">ตรวจสอบว่าบัญชีนี้ใช้อีเมลเดียวกับที่ผู้เชิญระบุ แล้วกดยอมรับได้เลย</div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => acceptInvite(urlInviteToken)} disabled={acceptingInviteId === urlInviteToken} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-60">
+                    <button onClick={() => acceptInvite(urlInviteToken)} disabled={acceptingInviteId === urlInviteToken} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60">
                       {acceptingInviteId === urlInviteToken ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}{acceptingInviteId === urlInviteToken ? 'กำลังยอมรับ…' : 'ยอมรับคำเชิญ'}
                     </button>
                     <button onClick={dismissIncomingInvite} aria-label="ซ่อนลิงก์เชิญนี้" className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-100"><X size={14} /></button>
@@ -976,7 +977,7 @@ function Dashboard() {
                     <div className="mt-0.5 text-xs leading-5 text-blue-800/80">รับที่อีเมล {item.email} · หมดอายุ {formatDate(item.expires_at)} · ผู้ดูแลร่วมเห็นข้อมูลและรับแจ้งเตือนได้ แต่แก้ไขข้อมูลไม่ได้</div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    <button onClick={() => acceptInvite(item.token)} disabled={acceptingInviteId === item.token} className="inline-flex items-center gap-1.5 rounded-lg bg-blue-700 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:opacity-60">
+                    <button onClick={() => acceptInvite(item.token)} disabled={acceptingInviteId === item.token} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60">
                       {acceptingInviteId === item.token ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}{acceptingInviteId === item.token ? 'กำลังยอมรับ…' : 'ยอมรับคำเชิญ'}
                     </button>
                     <button onClick={() => dismissPendingInvite(item.invite_id)} aria-label={`ซ่อนคำเชิญดูแล ${item.display_name}`} className="rounded-lg border border-blue-200 p-2 text-blue-700 hover:bg-blue-100"><X size={14} /></button>
@@ -999,7 +1000,7 @@ function Dashboard() {
             <form onSubmit={saveCaregiverProfile} className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-600">ชื่อผู้ดูแล</span>
-                <input value={caregiverProfile.full_name} onChange={(e) => setCaregiverProfile((p) => ({ ...p, full_name: e.target.value }))} required minLength={2} maxLength={100} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50" placeholder="ชื่อที่ใช้แสดง" />
+                <input value={caregiverProfile.full_name} onChange={(e) => setCaregiverProfile((p) => ({ ...p, full_name: e.target.value }))} required minLength={2} maxLength={100} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/15" placeholder="ชื่อที่ใช้แสดง" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-600">อีเมลบัญชี</span>
@@ -1007,14 +1008,14 @@ function Dashboard() {
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-600">เบอร์โทรศัพท์ (ไม่บังคับ)</span>
-                <input type="tel" value={caregiverProfile.phone} onChange={(e) => setCaregiverProfile((p) => ({ ...p, phone: e.target.value }))} maxLength={30} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50" placeholder="เบอร์สำหรับติดต่อ" />
+                <input type="tel" value={caregiverProfile.phone} onChange={(e) => setCaregiverProfile((p) => ({ ...p, phone: e.target.value }))} maxLength={30} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/15" placeholder="เบอร์สำหรับติดต่อ" />
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-slate-600">ความสัมพันธ์กับผู้ป่วย (ไม่บังคับ)</span>
-                <input value={caregiverProfile.relationship_to_patient} onChange={(e) => setCaregiverProfile((p) => ({ ...p, relationship_to_patient: e.target.value }))} maxLength={80} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50" placeholder="เช่น บุตร / ผู้ดูแลหลัก" />
+                <input value={caregiverProfile.relationship_to_patient} onChange={(e) => setCaregiverProfile((p) => ({ ...p, relationship_to_patient: e.target.value }))} maxLength={80} className="w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/15" placeholder="เช่น บุตร / ผู้ดูแลหลัก" />
               </label>
               <div className="sm:col-span-2 xl:col-span-4">
-                <button disabled={savingProfile} className="inline-flex items-center gap-2 rounded-xl bg-[#1e3764] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#28477e] disabled:opacity-60">
+                <button disabled={savingProfile} className="inline-flex items-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60">
                   <Save size={15} />{savingProfile ? 'กำลังบันทึก…' : 'บันทึกโปรไฟล์ผู้ดูแล'}
                 </button>
               </div>
@@ -1081,18 +1082,18 @@ function Dashboard() {
               <form onSubmit={addPatient} className="mt-5 grid gap-2 sm:grid-cols-2">
                 <label className="text-xs text-slate-500">
                   <span className="mb-1 block">ชื่อผู้ป่วยหรือรหัสนามแฝง (แนะนำ)</span>
-                  <input value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} minLength={2} maxLength={100} required className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                  <input value={newPatientName} onChange={(e) => setNewPatientName(e.target.value)} minLength={2} maxLength={100} required className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:bg-white focus:ring-4 focus:ring-[var(--accent)]/15" />
                 </label>
                 <label className="text-xs text-slate-500">
                   <span className="mb-1 block">ความสัมพันธ์ (ไม่บังคับ)</span>
-                  <input value={newPatientRelationship} onChange={(e) => setNewPatientRelationship(e.target.value)} maxLength={80} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                  <input value={newPatientRelationship} onChange={(e) => setNewPatientRelationship(e.target.value)} maxLength={80} className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:bg-white focus:ring-4 focus:ring-[var(--accent)]/15" />
                 </label>
                 <label className="text-xs text-slate-500">
                   <span className="mb-1 block">วันเกิด (ไม่บังคับ)</span>
-                  <input type="date" value={newPatientDob} onChange={(e) => setNewPatientDob(e.target.value)} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50" />
+                  <input type="date" value={newPatientDob} onChange={(e) => setNewPatientDob(e.target.value)} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none focus:border-[var(--accent)] focus:bg-white focus:ring-4 focus:ring-[var(--accent)]/15" />
                 </label>
                 <div className="flex items-end">
-                  <button disabled={addingPatient} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#1e3764] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#28477e] disabled:opacity-60">
+                  <button disabled={addingPatient} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60">
                     <Plus size={16} />{addingPatient ? 'กำลังบันทึก…' : 'เพิ่มผู้ป่วย'}
                   </button>
                 </div>
@@ -1107,7 +1108,7 @@ function Dashboard() {
 
               <div className="mt-4 divide-y divide-slate-100">
                 {loading ? (
-                  <div className="py-8 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+                  <div className="py-8 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
                 ) : visiblePatients.length === 0 ? (
                   <EmptyState
                     icon={HeartPulse}
@@ -1128,9 +1129,9 @@ function Dashboard() {
                               {isOwnerOf(patient)
                                 ? <div className="care-avatar care-avatar-owner is-sm" title="เจ้าของหลัก">หลัก</div>
                                 : <div className="care-avatar care-avatar-companion is-sm" title="ผู้ดูแลร่วม">ร่วม</div>}
-                              {patient.is_archived && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">เก็บเข้าคลัง</span>}
+                              {patient.is_archived && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">เก็บเข้าคลัง</span>}
                             </div>
-                            <div className="mt-0.5 text-xs text-slate-400">
+                            <div className="mt-0.5 text-xs text-slate-500">
                               เพิ่มเมื่อ {formatDate(patient.created_at)}
                               {patient.relationship ? ` · ${patient.relationship}` : ''}
                               {patient.date_of_birth ? ` · วันเกิด ${patient.date_of_birth}` : ''}
@@ -1157,18 +1158,18 @@ function Dashboard() {
                         <form onSubmit={savePatient} className="mt-4 grid gap-2 rounded-xl border border-blue-100 bg-blue-50/50 p-3 sm:grid-cols-2">
                           <label className="text-xs text-slate-600">
                             <span className="mb-1 block">ชื่อหรือรหัสนามแฝง</span>
-                            <input value={patientDraft.display_name} onChange={(e) => setPatientDraft((p) => ({ ...p, display_name: e.target.value }))} minLength={2} maxLength={100} required className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                            <input value={patientDraft.display_name} onChange={(e) => setPatientDraft((p) => ({ ...p, display_name: e.target.value }))} minLength={2} maxLength={100} required className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
                           </label>
                           <label className="text-xs text-slate-600">
                             <span className="mb-1 block">ความสัมพันธ์</span>
-                            <input value={patientDraft.relationship} onChange={(e) => setPatientDraft((p) => ({ ...p, relationship: e.target.value }))} maxLength={80} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                            <input value={patientDraft.relationship} onChange={(e) => setPatientDraft((p) => ({ ...p, relationship: e.target.value }))} maxLength={80} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
                           </label>
                           <label className="text-xs text-slate-600">
                             <span className="mb-1 block">วันเกิด (ไม่บังคับ)</span>
-                            <input type="date" value={patientDraft.date_of_birth || ''} onChange={(e) => setPatientDraft((p) => ({ ...p, date_of_birth: e.target.value }))} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500" />
+                            <input type="date" value={patientDraft.date_of_birth || ''} onChange={(e) => setPatientDraft((p) => ({ ...p, date_of_birth: e.target.value }))} max={new Date().toISOString().slice(0, 10)} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--accent)]" />
                           </label>
                           <div className="flex items-end gap-2">
-                            <button disabled={savingPatient} className="inline-flex items-center gap-1.5 rounded-lg bg-[#1e3764] px-3 py-2 text-xs font-semibold text-white disabled:opacity-60">
+                            <button disabled={savingPatient} className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] disabled:opacity-60">
                               <Save size={13} />{savingPatient ? 'กำลังบันทึก…' : 'บันทึก'}
                             </button>
                             <button type="button" onClick={() => setEditingPatientId('')} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600">
@@ -1184,12 +1185,12 @@ function Dashboard() {
                             <div key={device.id} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="truncate text-xs font-semibold">{device.device_name}</span>
-                                <span className={`inline-flex items-center gap-1 text-[11px] ${device.status === 'online' ? 'text-emerald-700' : 'text-slate-400'}`}>
+                                <span className={`inline-flex items-center gap-1 text-xs ${device.status === 'online' ? 'text-emerald-700' : 'text-slate-500'}`}>
                                   <span className={`h-1.5 w-1.5 rounded-full ${device.status === 'online' ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                                   {statusLabel(device.status)}
                                 </span>
                               </div>
-                              <div className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-500">
+                              <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-500">
                                 <Battery size={13} />{device.battery_percent == null ? 'ไม่มีข้อมูลแบตเตอรี่' : `แบตเตอรี่ ${device.battery_percent}%`}
                                 <span className="mx-1 text-slate-300">·</span>
                                 <Clock3 size={12} />{formatDate(device.last_seen_at)}
@@ -1215,7 +1216,7 @@ function Dashboard() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-600">
                               <Users size={13} /> ทีมผู้ดูแล
-                              <span className="hidden truncate text-[10px] font-normal text-slate-400 sm:inline">
+                              <span className="hidden truncate text-xs font-normal text-slate-500 sm:inline">
                                 เชิญได้ทีละ 1 ลิงก์ต่ออีเมล ใช้ได้ 7 วัน ผู้รับต้องเข้าสู่ระบบด้วยอีเมลเดียวกัน
                               </span>
                             </div>
@@ -1227,7 +1228,7 @@ function Dashboard() {
                           {circleOpenId === patient.id && (
                             <div className="mt-3">
                               {circleLoading ? (
-                                <div className="py-3 text-center text-xs text-slate-400">กำลังโหลดทีมผู้ดูแล…</div>
+                                <div className="py-3 text-center text-xs text-slate-500">กำลังโหลดทีมผู้ดูแล…</div>
                               ) : circleData?.error ? (
                                 <p className="text-xs leading-5 text-rose-700">{circleData.error}</p>
                               ) : circleData ? (
@@ -1254,9 +1255,9 @@ function Dashboard() {
                                       onChange={(e) => setInviteEmail(e.target.value)}
                                       required
                                       placeholder="อีเมลผู้ดูแลที่ต้องการเชิญ"
-                                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-50"
+                                      className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[var(--accent)] focus:bg-white focus:ring-4 focus:ring-[var(--accent)]/15"
                                     />
-                                    <button disabled={inviting} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1e3764] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#28477e] disabled:opacity-60">
+                                    <button disabled={inviting} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-3.5 py-2 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60">
                                       <Plus size={13} />{inviting ? 'กำลังสร้าง…' : 'สร้างลิงก์เชิญ'}
                                     </button>
                                   </form>
@@ -1290,13 +1291,13 @@ function Dashboard() {
                                       <li key={member.user_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-2 text-xs">
                                         <div className="min-w-0 flex-1">
                                           <div className="truncate font-medium text-slate-700">{member.full_name || member.user_id}</div>
-                                          <div className="text-[10px] text-slate-400">เข้าร่วมเมื่อ {formatDate(member.created_at)}</div>
+                                          <div className="text-xs text-slate-500">เข้าร่วมเมื่อ {formatDate(member.created_at)}</div>
                                         </div>
                                         {member.role === 'primary' ? (
-                                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">เจ้าของหลัก</span>
+                                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">เจ้าของหลัก</span>
                                         ) : (
                                           <>
-                                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-600">ผู้ดูแลร่วม</span>
+                                            <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-600">ผู้ดูแลร่วม</span>
                                             <button type="button" onClick={() => removeCaregiver(patient.id, member.user_id, member.full_name)} disabled={busyCircleAction === member.user_id} className="rounded-lg border border-slate-200 px-2 py-1 font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60">
                                               {busyCircleAction === member.user_id ? '…' : 'ลบออก'}
                                             </button>
@@ -1308,7 +1309,7 @@ function Dashboard() {
                                       <li key={invite.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/60 px-2.5 py-2 text-xs">
                                         <div className="min-w-0 flex-1">
                                           <div className="truncate font-medium text-blue-900">คำเชิญรอยืนยัน · {invite.email}</div>
-                                          <div className="text-[10px] text-blue-800/70">หมดอายุ {formatDate(invite.expires_at)}</div>
+                                          <div className="text-xs text-blue-800/70">หมดอายุ {formatDate(invite.expires_at)}</div>
                                         </div>
                                         <button type="button" onClick={() => revokeCaregiverInvite(patient.id, invite.id)} disabled={busyCircleAction === invite.id} className="rounded-lg border border-blue-200 px-2 py-1 font-semibold text-blue-800 hover:bg-blue-100 disabled:opacity-60">
                                           {busyCircleAction === invite.id ? '…' : 'ยกเลิก'}
@@ -1339,7 +1340,7 @@ function Dashboard() {
 
               <div className="mt-4 space-y-3">
                 {loading ? (
-                  <div className="py-8 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+                  <div className="py-8 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
                 ) : data.approvals.length === 0 ? (
                   <EmptyState icon={LockKeyhole} title="ไม่มีคำขอในขณะนี้" text="เมื่อกล่องยาส่งคำขอที่มี BLE proof ผ่าน Device Gateway รายการจะแสดงตรงนี้" />
                 ) : data.approvals.map((request) => {
@@ -1354,16 +1355,16 @@ function Dashboard() {
                           <div className="text-sm font-semibold text-slate-900">ช่องยา {request.compartment_no} · {patientNames.get(request.patient_id) || 'ผู้ป่วย'}</div>
                           <div className="mt-1.5 text-xs text-slate-500">รับคำขอ {formatDate(request.requested_at)}</div>
                         </div>
-                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${request.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : request.status === 'pending' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>{status}</span>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${request.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : request.status === 'pending' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>{status}</span>
                       </div>
                       {request.status === 'pending' && (
                         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <div className={`flex items-center gap-1.5 text-xs ${request.ble_verified ? 'text-emerald-700' : 'text-slate-500'}`}>
                             {request.ble_verified && <CheckCircle2 size={14} aria-hidden="true" />}
                             <span>{request.ble_verified ? 'กล่องยายืนยัน BLE แล้ว' : 'ยังไม่ยืนยันระยะใกล้ผ่าน BLE'}</span>
-                            <div className="mt-1 text-[11px] text-slate-400">หมดอายุ: {formatDate(request.expires_at)}</div>
+                            <div className="mt-1 text-xs text-slate-500">หมดอายุ: {formatDate(request.expires_at)}</div>
                           </div>
-                          <button disabled={!canApprove || approvingId === request.id} onClick={() => approve(request.id)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1e3764] px-3 py-2 text-xs font-semibold text-white hover:bg-[#28477e]">
+                          <button disabled={!canApprove || approvingId === request.id} onClick={() => approve(request.id)} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)]">
                             {approvingId === request.id ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}อนุมัติ
                           </button>
                         </div>
@@ -1385,11 +1386,11 @@ function Dashboard() {
                 <h2 className="font-bold text-slate-900">เหตุการณ์และการแจ้งเตือนล่าสุด</h2>
                 <p className="mt-1 text-xs text-slate-500">การออกนอก Geofence · การเปิดสายรัด · แบตเตอรี่ต่ำ · BLE ขาดการเชื่อมต่อ</p>
               </div>
-              <BellRing size={19} className="text-slate-400" />
+              <BellRing size={19} className="text-slate-500" />
             </div>
             <div className="mt-4">
               {loading ? (
-                <div className="py-8 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+                <div className="py-8 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
               ) : data.alerts.length === 0 ? (
                 <EmptyState icon={BellRing} title="ยังไม่มีเหตุการณ์แจ้งเตือน" text="รายการจริงจะแสดงเมื่อ Device Gateway บันทึกเหตุการณ์จากอุปกรณ์" />
               ) : (
@@ -1402,9 +1403,9 @@ function Dashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm font-semibold text-slate-800">{alert.message}</span>
-                          {!alert.acknowledged_at && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700">ยังไม่รับทราบ</span>}
+                          {!alert.acknowledged_at && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-xs font-semibold text-rose-700">ยังไม่รับทราบ</span>}
                         </div>
-                        <div className="mt-1 text-xs text-slate-400">{patientNames.get(alert.patient_id) || 'ผู้ป่วย'} · {formatDate(alert.occurred_at)}</div>
+                        <div className="mt-1 text-xs text-slate-500">{patientNames.get(alert.patient_id) || 'ผู้ป่วย'} · {formatDate(alert.occurred_at)}</div>
                       </div>
                       {!alert.acknowledged_at && (
                         <button
@@ -1422,7 +1423,7 @@ function Dashboard() {
             </div>
           </section>
 
-          <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+          <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span>GeoWrisX AD · Research prototype · R&amp;D / OCOP</span>
             <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> ข้อมูลทดสอบเท่านั้นจนกว่าจะผ่านการตรวจสอบความปลอดภัยและการทดสอบจริง</span>
           </footer>
@@ -1478,7 +1479,7 @@ function SettingsToggle({ checked, label, hint, onChange }) {
     <label className="flex items-start justify-between gap-4 rounded-xl border border-slate-200 px-3.5 py-3">
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-slate-800">{label}</span>
-        {hint && <span className="mt-0.5 block text-xs leading-5 text-slate-400">{hint}</span>}
+        {hint && <span className="mt-0.5 block text-xs leading-5 text-slate-500">{hint}</span>}
       </span>
       <input
         type="checkbox"
@@ -1548,7 +1549,7 @@ function SettingsView({ profile, email, patients, devices, inviteCount, prefs, s
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-bold text-slate-900"><BellRing size={18} className="text-slate-500" /> การแจ้งเตือน</h2>
-            <span className="text-[11px] text-slate-400">ช่องทาง + เรื่อง</span>
+            <span className="text-xs text-slate-500">ช่องทาง + เรื่อง</span>
           </div>
           <div className="mt-4 space-y-2.5">
             <SettingsToggle
@@ -1580,45 +1581,45 @@ function SettingsView({ profile, email, patients, devices, inviteCount, prefs, s
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-bold text-slate-900"><UserRound size={18} className="text-slate-500" /> โปรไฟล์ผู้ดูแล</h2>
-              <span className="text-[11px] text-slate-400">ตั้งจากการ์ดบัญชีบนแดชบอร์ด</span>
+              <span className="text-xs text-slate-500">ตั้งจากการ์ดบัญชีบนแดชบอร์ด</span>
             </div>
             <dl className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">ชื่อ</dt><dd className="text-right font-semibold text-slate-800">{profile.full_name || '—'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">อีเมลบัญชี</dt><dd className="text-right font-semibold text-slate-800">{email || '—'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">เบอร์โทร</dt><dd className="text-right font-semibold text-slate-800">{profile.phone || '—'}</dd></div>
-              <div className="flex justify-between gap-4"><dt className="text-slate-400">ความสัมพันธ์</dt><dd className="text-right font-semibold text-slate-800">{profile.relationship_to_patient || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">ชื่อ</dt><dd className="text-right font-semibold text-slate-800">{profile.full_name || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">อีเมลบัญชี</dt><dd className="text-right font-semibold text-slate-800">{email || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">เบอร์โทร</dt><dd className="text-right font-semibold text-slate-800">{profile.phone || '—'}</dd></div>
+              <div className="flex justify-between gap-4"><dt className="text-slate-500">ความสัมพันธ์</dt><dd className="text-right font-semibold text-slate-800">{profile.relationship_to_patient || '—'}</dd></div>
             </dl>
-            <p className="mt-3 text-xs leading-5 text-slate-400">แก้ไขได้ที่การ์ด "บัญชีของฉัน" ในหน้าแดชบอร์ด (ปุ่มแก้โปรไฟล์)</p>
+            <p className="mt-3 text-xs leading-5 text-slate-500">แก้ไขได้ที่การ์ด "บัญชีของฉัน" ในหน้าแดชบอร์ด (ปุ่มแก้โปรไฟล์)</p>
           </section>
 
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-bold text-slate-900"><Watch size={18} className="text-slate-500" /> ผู้ป่วยและอุปกรณ์</h2>
-              <span className="text-[11px] text-slate-400">{patients.filter((p) => !p.is_archived).length} ราย · {activeDevices.length} เครื่อง</span>
+              <span className="text-xs text-slate-500">{patients.filter((p) => !p.is_archived).length} ราย · {activeDevices.length} เครื่อง</span>
             </div>
             {patients.filter((p) => !p.is_archived).length === 0 ? (
-              <p className="mt-4 text-sm text-slate-400">ยังไม่มีผู้ป่วย active — เพิ่มได้จากการ์ดผู้ป่วยบนแดชบอร์ด</p>
+              <p className="mt-4 text-sm text-slate-500">ยังไม่มีผู้ป่วย active — เพิ่มได้จากการ์ดผู้ป่วยบนแดชบอร์ด</p>
             ) : (
               <ul className="mt-4 space-y-2 text-sm">
                 {patients.filter((p) => !p.is_archived).map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 px-3 py-2">
                     <span className="font-semibold text-slate-800">{p.display_name}</span>
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-slate-500">
                       {devices.filter((d) => d.patient_id === p.id && !d.is_archived).map((d) => d.device_name).join(', ') || 'ยังไม่มีอุปกรณ์'}
                     </span>
                   </li>
                 ))}
               </ul>
             )}
-            <p className="mt-3 text-xs leading-5 text-slate-400">การลงทะเบียน/ลบอุปกรณ์ทำจากการ์ดอุปกรณ์บนแดชบอร์ด (เพิ่ม UI จัดการตรงนี้ในเฟสถัดไป)</p>
+            <p className="mt-3 text-xs leading-5 text-slate-500">การลงทะเบียน/ลบอุปกรณ์ทำจากการ์ดอุปกรณ์บนแดชบอร์ด (เพิ่ม UI จัดการตรงนี้ในเฟสถัดไป)</p>
           </section>
 
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-bold text-slate-900"><Users size={18} className="text-slate-500" /> สมาชิกทีม</h2>
-              <span className="text-[11px] text-slate-400">{inviteCount > 0 ? `${inviteCount} คำเชิญรอ` : '—'}</span>
+              <span className="text-xs text-slate-500">{inviteCount > 0 ? `${inviteCount} คำเชิญรอ` : '—'}</span>
             </div>
-            <p className="mt-4 text-xs leading-5 text-slate-400">
+            <p className="mt-4 text-xs leading-5 text-slate-500">
               เชิญผู้ดูแลร่วมและจัดการวงดูแลจากการ์ดวงผู้ดูแลของแต่ละผู้ป่วย (ปุ่ม "วงผู้ดูแล" บนการ์ดผู้ป่วย)
             </p>
           </section>
@@ -1648,7 +1649,7 @@ function SettingsView({ profile, email, patients, devices, inviteCount, prefs, s
           <SettingsToggle checked={ui.show_sleep !== false} label="แสดงข้อมูลการนอน" onChange={(v) => patchUi('show_sleep', v)} />
           <SettingsToggle checked={ui.show_files !== false} label="แสดงไฟล์แนบผู้ป่วย" onChange={(v) => patchUi('show_files', v)} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-slate-400">
+        <p className="mt-3 text-xs leading-5 text-slate-500">
           การเก็บสลับ/คืนผู้ป่วยและการลบข้อมูลยังทำจากการ์ดผู้ป่วย — ข้อมูล GPS/แผนที่เตรียม UI ความเป็นส่วนตัวเพิ่มในเฟส P2
         </p>
       </section>
@@ -1664,7 +1665,7 @@ function SettingsView({ profile, email, patients, devices, inviteCount, prefs, s
         {savedAt && <span className="text-xs text-emerald-700">บันทึกแล้ว {savedAt}</span>}
       </div>
 
-      <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <span>GeoWrisX AD · Research prototype · R&amp;D / OCOP</span>
         <span className="flex items-center gap-1.5"><ShieldCheck size={13} /> การตั้งค่าเก็บต่อบัญชีผู้ใช้ใน Neon Postgres</span>
       </footer>
@@ -1682,7 +1683,7 @@ function NavItem({ icon: Icon, label, active = false, count = 0, onClick }) {
     >
       <Icon size={17} />
       <span className="flex-1">{label}</span>
-      {count > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-100 px-1.5 text-[10px] font-bold text-rose-700">{count}</span>}
+      {count > 0 && <span className="grid h-5 min-w-5 place-items-center rounded-full bg-rose-100 px-1.5 text-xs font-bold text-rose-700">{count}</span>}
     </button>
   );
 }
@@ -1690,9 +1691,9 @@ function NavItem({ icon: Icon, label, active = false, count = 0, onClick }) {
 export function EmptyState({ icon: Icon, title, text }) {
   return (
     <div className="grid justify-items-center px-4 py-8 text-center">
-      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Icon size={20} /></div>
+      <div className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-100 text-slate-500"><Icon size={20} /></div>
       <div className="mt-3 text-sm font-semibold text-slate-700">{title}</div>
-      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-400">{text}</p>
+      <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">{text}</p>
     </div>
   );
 }

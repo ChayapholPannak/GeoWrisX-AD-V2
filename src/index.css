@@ -87,9 +87,21 @@
   --color-amber-50: #221b0f;
   --color-amber-100: #282012;
   --color-amber-200: #3b3020;
+  --color-amber-600: #8a5a00;
   --color-amber-700: #e5bf72;
   --color-amber-800: #efd190;
+  --color-amber-900: #f3d9a0;
   --color-blue-50: #171a1e;
+  --color-blue-100: #1d2226;
+  --color-blue-200: #2b3540;
+  --color-blue-700: #8fc1ee;
+  --color-blue-800: #a9d1f3;
+  --color-blue-900: #cfe4f6;
+  --color-emerald-600: #1e6b45;
+  --color-emerald-800: #a7e3c4;
+  --color-emerald-900: #c8eed9;
+  --color-rose-100: #2c1e20;
+  --color-rose-600: #f58e96;
 }
 
 /* bg-white ใช้เป็น "พื้นการ์ด" เท่านั้น — map ไป surface (ไม่ flip var --color-white
@@ -97,8 +109,7 @@
 .dark .bg-white { background-color: var(--surface); }
 .dark .focus\:bg-white:focus { background-color: var(--surface); }
 
-/* ปุ่ม navy หลัก: โหมดมืดให้ hover สว่างขึ้นแทนที่จะมืดลง */
-.dark .app-shell button[class*="bg-[#1e3764]"]:hover { background: #33475e !important; }
+/* ปุ่ม navy หลักเดิมถูกแทนด้วย class primary บน var(--accent) ใน JSX แล้ว — ไม่ต้องมี hack */
 
 /* แผนที่ OSM ยังเป็น tile สว่าง — หรี่ลงเล็กน้อยให้กลมกลืนกับหน้ามืด */
 .dark .gx-map .leaflet-tile { filter: brightness(.85) saturate(.9); }
@@ -164,6 +175,19 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .auth-intro .auth-feature > div:first-child { color: var(--mint); }
 
 .auth-shell .text-xs { font-size: 13px; }
+/* Clerk ภายในหน้า auth: focus ต้องชัด 3:1 ขึ้นไป และ footer อ่านได้ 4.5:1 (gate: focus-visible, contrast) */
+.auth-shell .cl-formFieldInput:focus,
+.auth-shell .cl-input:focus {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+.auth-shell .cl-formButtonPrimary:focus-visible,
+.auth-shell .cl-button:focus-visible {
+  outline: 2px solid var(--accent) !important;
+  outline-offset: 2px;
+}
+.auth-shell .cl-footerActionText { color: var(--muted) !important; }
+.auth-shell .cl-footerActionLink { color: var(--accent-strong) !important; text-decoration: underline; }
 .auth-mobile-title { display: block; }
 .auth-shell input,
 .setup-shell input {
@@ -173,8 +197,8 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 .auth-shell input:focus,
 .setup-shell input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid color-mix(in srgb, var(--accent) 16%, transparent);
-  outline-offset: 1px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ============================================================ shell  */
@@ -197,6 +221,7 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   position: absolute; left: 0; top: calc(100% + 8px);
   width: max-content; min-width: 260px; max-width: min(320px, calc(100vw - 24px));
   max-height: calc(100vh - 96px); overflow: auto;
+  overscroll-behavior: contain;
   background: #12303a; color: #a8c3c6;
   border: 1px solid rgb(255 255 255 / .14);
   border-radius: 12px;
@@ -240,6 +265,29 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
   border-radius: var(--radius-control);
   color: #b9d4cf;
 }
+/* โหมดมืด: ลิ้นชักเมนูกลืนกับพาเลตต์ดำสนิท (ไม่ใช่ teal เดิม) */
+.dark .menu-panel {
+  background: var(--raised);
+  border-color: var(--border);
+  color: var(--muted);
+  box-shadow: 0 18px 40px rgb(0 0 0 / .55);
+}
+.dark .menu-panel .brand-mark { background: rgb(255 255 255 / .1); color: var(--text); }
+.dark .menu-panel .brand-mark + div,
+.dark .menu-panel .brand-mark + div span { color: var(--text); }
+.dark .menu-panel .brand-mark + div span { color: var(--accent); }
+.dark .menu-panel .brand-mark + div small { color: var(--muted); }
+.dark .menu-panel .menu-label { color: var(--muted); }
+.dark .nav-item { color: var(--muted); }
+.dark .nav-item:hover { background: var(--active); color: var(--text); }
+.dark .nav-item.is-active { background: var(--active); color: var(--text); }
+.dark .nav-item.is-active svg { color: var(--accent); }
+.dark .sidebar-note { background: var(--active); border-color: var(--border); color: var(--muted); }
+.dark .sidebar-note > div { color: var(--text); }
+.dark .sidebar-note > div:last-child { background: var(--surface); color: var(--muted); }
+/* label หัวข้อในลิ้นชักเมนู: สว่าง = บนพื้น teal เข้ม, มืด = token */
+.menu-panel .menu-label { color: #9fbcbf; }
+.dark .menu-panel .menu-label { color: var(--muted); }
 
 .app-main { background: var(--paper); }
 /* skip link: ซ่อนจนกว่าจะแตะผ่านแป้นพิมพ์ */
@@ -287,17 +335,17 @@ button:not(:disabled):active { transform: scale(.97); transition: transform 90ms
 }
 .app-sheet input:focus {
   border-color: var(--accent) !important;
-  outline: 3px solid color-mix(in srgb, var(--accent) 16%, transparent);
-  outline-offset: 1px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
-/* ---- ปุ่ม action หลัก (semantic: ink หลัก, accent ย่อรับสายแจ้ง) ---- */
-.app-shell button[class*="bg-[#1e3764]"] {
-  background: #173b44 !important;
-  border-radius: var(--radius-control) !important;
-  transition: background 160ms var(--ease-out), transform 90ms ease-out;
+/* ---- ปุ่มทุกปุ่มในแอป: ระบบเดียว — transition เฉพาะ property ที่เปลี่ยน
+   (กดหดใช้กฎ button:not(:disabled):active ด้านบนที่มี reduced-motion guard แล้ว) ---- */
+.app-shell button {
+  transition-property: background-color, border-color, color, opacity, scale, transform;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out);
 }
-.app-shell button[class*="bg-[#1e3764]"]:hover { background: var(--accent-strong) !important; }
 .refresh-control {
   border: 1px solid var(--control);
   border-radius: var(--radius-control);

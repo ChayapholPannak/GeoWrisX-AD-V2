@@ -349,18 +349,18 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
             <div className="flex items-center gap-2.5">
               <span className={`rounded-full border px-3 py-1 text-xs font-bold ${chip.cls}`}>{chip.text}</span>
               {track?.latest_exit && (
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-slate-500">
                   แจ้งล่าสุด: {formatDate(track.latest_exit.occurred_at)}
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-slate-400">
+            <div className="text-xs text-slate-500">
               {lastPoint ? `จุดล่าสุด ${formatDate(lastPoint.recorded_at)} · ±${lastPoint.acc_m ?? '?'} m` : `${points.length} จุดใน ${track?.window_hours || 24} ชม.`}
             </div>
           </div>
           <div className="mt-3">
             {loading ? (
-              <div className="gx-map skeleton grid h-[420px] w-full place-items-center rounded-xl border border-slate-200 text-sm text-slate-400">กำลังโหลดแผนที่…</div>
+              <div className="gx-map skeleton grid h-[420px] w-full place-items-center rounded-xl border border-slate-200 text-sm text-slate-500">กำลังโหลดแผนที่…</div>
             ) : (
               <>
                 <TrackMap
@@ -396,7 +396,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
                   </button>
                 </div>
               ) : null}
-                <div className="mt-2 text-[11px] text-slate-400">
+                <div className="mt-2 text-xs text-slate-500">
                   คลิกบนแผนที่แล้วเปิดโหมดวาด: กำหนดพื้นที่ที่ไม่ใช่วงกลม — 3–64 จุด
                 </div>
               </>
@@ -407,7 +407,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-bold text-slate-900"><ShieldCheck size={18} className="text-slate-500" /> พื้นที่ปลอดภัย</h2>
-            <span className="text-[11px] text-slate-400">{geofences.filter((g) => g.is_active).length} วง active</span>
+            <span className="text-xs text-slate-500">{geofences.filter((g) => g.is_active).length} วง active</span>
           </div>
 
           {!canManage && (
@@ -451,7 +451,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
                 </button>
                 <button onClick={() => setFormOpen(false)} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-50">ยกเลิก</button>
               </div>
-              <p className="text-[11px] leading-4 text-slate-400">ปุ่ม วงกลม = กรอพิกัด/รัศมี ส่วน "วาดรูปหลายเหลี่ยม" คลิกจุดบนแผนที่ทีละจุด</p>
+              <p className="text-xs leading-4 text-slate-500">ปุ่ม วงกลม = กรอพิกัด/รัศมี ส่วน "วาดรูปหลายเหลี่ยม" คลิกจุดบนแผนที่ทีละจุด</p>
             </div>
           )}
 
@@ -464,17 +464,17 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-800">{f.label}</div>
-                      <div className="mt-0.5 text-[11px] text-slate-400">
+                      <div className="mt-0.5 text-xs text-slate-500">
                         {f.kind === 'circle' ? `วงกลม · รัศมี ${f.radius_m} m` : 'polygon'}{f.address ? ` · ${f.address}` : ''}
                       </div>
                     </div>
                     {canManage && (
                       <div className="flex shrink-0 items-center gap-2">
-                        <label className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <label className="text-xs text-slate-500 flex items-center gap-1">
                           <input type="checkbox" checked={f.is_active} disabled={busy === f.id} onChange={(e) => patchFence(f.id, { is_active: e.target.checked })} className="h-4 w-4 accent-[#1e3764]" />
                           เปิด
                         </label>
-                        <button aria-label="ปิดการใช้งาน" onClick={() => deleteFence(f.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                        <button aria-label="ปิดการใช้งาน" onClick={() => deleteFence(f.id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -485,13 +485,13 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
             )}
           </div>
 
-          <div className="mt-4 rounded-xl bg-emerald-50/60 p-3 text-[11px] leading-5 text-emerald-900">
+          <div className="mt-4 rounded-xl bg-emerald-50/60 p-3 text-xs leading-5 text-emerald-900">
             <span className="font-semibold">ตั้งค่าแจ้งเตือนสำหรับเขตนี้:</span> เปิด toggle "ออกนอกพื้นที่ปลอดภัย" ที่หน้า ตั้งค่า → การแจ้งเตือน ได้เลย (email ส่งผ่าน Resend อัตโนมัติเมื่อออกเขต)
           </div>
         </section>
       </div>
 
-      <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-[11px] leading-5 text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+      <footer className="mt-7 flex flex-col gap-2 border-t border-slate-200 pt-5 text-xs leading-5 text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <span>GeoWrisX AD · Research prototype · R&amp;D / OCOP</span>
         <span>แผนที่และข้อมูลจาก OpenStreetMap · เฉพาะผู้ดูแลในวง</span>
       </footer>

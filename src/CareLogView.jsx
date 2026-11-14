@@ -211,22 +211,22 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
       {/* summary strip — ตัวเลขเดียวต่อบัตร */}
       <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><Moon size={14} /> นอนเฉลี่ย ({summary.sleep_nights || 0} คืน)</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Moon size={14} /> นอนเฉลี่ย ({summary.sleep_nights || 0} คืน)</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">{hhmm(summary.sleep_avg_min)}</div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><HeartPulse size={14} /> อัตราการเต้นเฉลี่ย</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><HeartPulse size={14} /> อัตราการเต้นเฉลี่ย</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">
             {summary.hr_avg ? `${summary.hr_avg} bpm` : '—'}
-            {summary.hr_min != null && <span className="ml-2 text-xs text-slate-400">{summary.hr_min}–{summary.hr_max}</span>}
+            {summary.hr_min != null && <span className="ml-2 text-xs text-slate-500">{summary.hr_min}–{summary.hr_max}</span>}
           </div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><CheckCircle2 size={14} /> ทานยาสำเร็จ</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><CheckCircle2 size={14} /> ทานยาสำเร็จ</div>
           <div className="mt-2 text-2xl font-semibold text-emerald-700">{summary.pillbox_events || 0} ครั้ง</div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><XCircle size={14} /> ไม่ได้ทาน / นอกเวลา</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><XCircle size={14} /> ไม่ได้ทาน / นอกเวลา</div>
           <div className="mt-2 text-2xl font-semibold text-rose-700">{summary.missed_events || 0} ครั้ง</div>
         </div>
       </section>
@@ -236,7 +236,7 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <h2 className="flex items-center gap-2 font-bold text-slate-900"><Moon size={18} className="text-slate-500" /> การนอน</h2>
           {loading ? (
-            <div className="mt-6 py-6 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+            <div className="mt-6 py-6 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
           ) : !log || log.sleep.length === 0 ? (
             <div className="mt-4"><EmptyState icon={Moon} title="ยังไม่มีข้อมูลการนอน" text="ข้อมูลจะเกิดเมื่ออุปกรณ์ส่งเหตุการณ์ SLEEP_SUMMARY เข้าระบบ" /></div>
           ) : (
@@ -245,12 +245,12 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
                 const frac = Math.min(n.duration_min / 720, 1);
                 return (
                   <div key={n.id} className="flex items-center gap-3">
-                    <span className="w-16 shrink-0 text-xs text-slate-400">{formatDate(n.night_date)}</span>
+                    <span className="w-16 shrink-0 text-xs text-slate-500">{formatDate(n.night_date)}</span>
                     <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
                       <div className="h-full rounded-full bg-[#0d9488]" style={{ width: `${Math.round(frac * 100)}%` }} />
                     </div>
                     <span className="w-28 shrink-0 text-right text-xs text-slate-500">{hhmm(n.duration_min)}</span>
-                    <span className="w-24 shrink-0 text-right text-[11px] text-slate-400">{QUALITY_TEXT[n.quality] || n.quality}</span>
+                    <span className="w-24 shrink-0 text-right text-xs text-slate-500">{QUALITY_TEXT[n.quality] || n.quality}</span>
                   </div>
                 );
               })}
@@ -262,14 +262,14 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <h2 className="flex items-center gap-2 font-bold text-slate-900"><HeartPulse size={18} className="text-slate-500" /> อัตราการเต้นและชีพจร</h2>
           {loading ? (
-            <div className="mt-6 py-6 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+            <div className="mt-6 py-6 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
           ) : !log || log.hr.length === 0 ? (
             <div className="mt-4"><EmptyState icon={HeartPulse} title="ยังไม่มีข้อมูลชีพจร" text="ข้อมูลจะเกิดเมื่ออุปกรณ์ส่งเหตุการณ์ HR_BATCH เข้าระบบ" /></div>
           ) : (
             <>
               <div className="mt-4 flex items-end gap-3">
                 <span className="text-3xl font-semibold text-slate-950">{log.hr[log.hr.length - 1].bpm}</span>
-                <span className="pb-1 text-xs text-slate-400">bpm ล่าสุด · {formatDate(log.hr[log.hr.length - 1].recorded_at)}</span>
+                <span className="pb-1 text-xs text-slate-500">bpm ล่าสุด · {formatDate(log.hr[log.hr.length - 1].recorded_at)}</span>
               </div>
               <div className="mt-3 flex h-16 items-end gap-[3px]">
                 {log.hr.slice(-48).map((h, i) => (
@@ -282,7 +282,7 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
                 ))}
               </div>
               {log.hr.some((h) => h.spo2) && (
-                <p className="mt-2 text-[11px] text-slate-400">
+                <p className="mt-2 text-xs text-slate-500">
                   SpO₂ ล่าสุด: {log.hr.filter((h) => h.spo2).slice(-1)[0].spo2}%
                 </p>
               )}
@@ -294,7 +294,7 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 font-bold text-slate-900"><Clock size={18} className="text-slate-500" /> เวลายา</h2>
-            <span className="text-[11px] text-slate-400">{schedules.filter((s) => s.is_active).length} รายการ active</span>
+            <span className="text-xs text-slate-500">{schedules.filter((s) => s.is_active).length} รายการ active</span>
           </div>
 
           {!canManage && (
@@ -325,7 +325,7 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
                   <button key={i} onClick={() => setForm({
                     ...form,
                     days: form.days.includes(i) ? form.days.filter((x) => x !== i) : [...form.days, i],
-                  })} className={`h-7 w-8 rounded-lg text-[11px] font-semibold ${form.days.includes(i) ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}>{d}</button>
+                  })} className={`h-7 w-8 rounded-lg text-xs font-semibold ${form.days.includes(i) ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-600'}`}>{d}</button>
                 ))}
               </div>
               <div className="flex items-center gap-2 pt-1">
@@ -346,15 +346,15 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-slate-800">{timeText(s.time_of_day)} · {s.label}</div>
-                      <div className="mt-0.5 text-[11px] text-slate-400">ช่อง {s.compart_no} · {s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAY_LABELS[d]).join(' ')}</div>
+                      <div className="mt-0.5 text-xs text-slate-500">ช่อง {s.compart_no} · {s.days.length === 7 ? 'ทุกวัน' : s.days.map((d) => DAY_LABELS[d]).join(' ')}</div>
                     </div>
                     {canManage && (
                       <div className="flex shrink-0 items-center gap-2">
-                        <label className="flex items-center gap-1 text-[11px] text-slate-400">
+                        <label className="flex items-center gap-1 text-xs text-slate-500">
                           <input type="checkbox" checked={s.is_active} disabled={busy === s.id} onChange={(e) => patchSchedule(s.id, { is_active: e.target.checked })} className="h-4 w-4 accent-[#1e3764]" />
                           เปิด
                         </label>
-                        <button aria-label="ลบเวลายา" onClick={() => deleteSchedule(s.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                        <button aria-label="ลบเวลายา" onClick={() => deleteSchedule(s.id)} className="rounded-lg p-1.5 text-slate-500 hover:bg-rose-50 hover:text-rose-600">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -370,7 +370,7 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
           <h2 className="flex items-center gap-2 font-bold text-slate-900"><CheckCircle2 size={18} className="text-slate-500" /> เหตุการณ์ยาล่าสุด</h2>
           {loading ? (
-            <div className="mt-6 py-6 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+            <div className="mt-6 py-6 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
           ) : intakes.length === 0 ? (
             <div className="mt-4"><EmptyState icon={Clock} title="ยังไม่มีเหตุการณ์การทานยา" text="กล่องยาจะบันทึกเมื่อถอดทานหรือรายงานพลาดผ่าน MED_EVENT" /></div>
           ) : (
@@ -379,18 +379,18 @@ export default function CareLogView({ patients, viewerUserId, authedRequest, aut
                 const badge = ACTION_BADGE[i.action] || ACTION_BADGE.unscheduled;
                 return (
                   <div key={i.id} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge.cls}`}>{badge.text}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${badge.cls}`}>{badge.text}</span>
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-700">
                       {i.schedule_label || `ช่องที่ ${i.compart_no}`}
                       {i.weight_g ? ` · ${Number(i.weight_g)} g` : ''}
                     </span>
-                    <span className="shrink-0 text-[11px] text-slate-400">{formatDate(i.taken_at)}</span>
+                    <span className="shrink-0 text-xs text-slate-500">{formatDate(i.taken_at)}</span>
                   </div>
                 );
               })}
             </div>
           )}
-          <p className="mt-4 rounded-xl bg-slate-50 p-3 text-[11px] leading-5 text-slate-500">
+          <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-500">
             Cron ตรวจทุก 15 นาที: เวลายาผ่านไป 60 นาที (ไม่เกิน 12 ชม.) และไม่มีบันทึกการทาน → แจ้งเตือน "ไม่ได้ทานยา" พร้อมอีเมลให้วงผู้ดูแล
           </p>
         </section>

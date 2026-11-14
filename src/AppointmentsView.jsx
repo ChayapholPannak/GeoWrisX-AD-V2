@@ -179,7 +179,7 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
   const bkkMonth = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'numeric' }).format(new Date());
   const monthCount = list.filter((a) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: 'numeric' }).format(new Date(a.occurs_at)) === bkkMonth).length;
 
-  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-[var(--accent)] focus:outline-none';
+  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-500 focus:border-[var(--accent)] focus:outline-none';
 
   return (
     <div className="app-fade mx-auto app-sheet max-w-[1400px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
@@ -264,19 +264,19 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
       {/* ตัวเลขสถานะนัดหมาย */}
       <section className="app-fade-2 mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><CalendarCheck size={14} /> มีนัดเดือนนี้</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><CalendarCheck size={14} /> มีนัดเดือนนี้</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">{monthCount} ครั้ง</div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><Clock size={14} /> กำลังจะถึง</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Clock size={14} /> กำลังจะถึง</div>
           <div className="mt-2 text-2xl font-semibold text-slate-950">{scheduled.filter((a) => new Date(a.occurs_at).getTime() > Date.now()).length} ครั้ง</div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><Ban size={14} /> เลื่อน / ยกเลิก</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><Ban size={14} /> เลื่อน / ยกเลิก</div>
           <div className="mt-2 text-2xl font-semibold text-amber-700">{list.filter((a) => a.status === 'canceled').length} ครั้ง</div>
         </div>
         <div className="rounded-2xl border border-slate-200/80 bg-white p-4 panel-shadow">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-400"><CheckCircle2 size={14} /> ทำสำเร็จ</div>
+          <div className="flex items-center gap-2 text-xs font-medium text-slate-500"><CheckCircle2 size={14} /> ทำสำเร็จ</div>
           <div className="mt-2 text-2xl font-semibold text-emerald-700">{list.filter((a) => a.status === 'done').length} ครั้ง</div>
         </div>
       </section>
@@ -285,7 +285,7 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
       <section className="mt-5 rounded-2xl border border-slate-200/80 bg-white p-5 panel-shadow">
         <h2 className="flex items-center gap-2 font-bold text-slate-900"><ListTodo size={18} className="text-slate-500" /> นัดที่กำลังจะมาถึง</h2>
         {loading && !items ? (
-          <div className="mt-6 py-6 text-center text-sm text-slate-400">กำลังโหลดข้อมูล…</div>
+          <div className="mt-6 py-6 text-center text-sm text-slate-500">กำลังโหลดข้อมูล…</div>
         ) : [next, ...upcoming].filter(Boolean).length === 0 ? (
           <div className="mt-4">
             <EmptyState icon={ListTodo} title="ยังไม่มีนัดหมายคิวถัดไป" text={canManage ? 'กด "เพิ่มนัดหมาย" เพื่อบันทึกนัดโรงพยาบาลครั้งถัดไป' : 'ผู้ดูแลหลักจะเป็นผู้เพิ่มนัดหมายให้ผู้ป่วยนี้'} />
@@ -296,13 +296,13 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
               <div key={apt.id} className={`flex items-center gap-4 rounded-xl border p-3 ${apt.id === next?.id ? 'border-[var(--accent-soft)] bg-gradient-to-r from-[var(--active)] to-[var(--surface)]' : 'border-slate-200/80'}`}>
                 <div className="w-14 flex-none rounded-xl bg-[var(--active)] py-2 text-center">
                   <div className="text-lg font-bold leading-tight text-[var(--accent)]">{dayBadge(apt.occurs_at).day}</div>
-                  <div className="text-[11px] text-slate-500">{dayBadge(apt.occurs_at).month}</div>
+                  <div className="text-xs text-slate-500">{dayBadge(apt.occurs_at).month}</div>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate text-sm font-semibold text-slate-900">{apt.place}</span>
                     <span className="text-sm text-slate-600">— {apt.title}</span>
-                    <span className="rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--on-accent)]">{daysAhead(apt.occurs_at)}</span>
+                    <span className="rounded-full bg-[var(--accent)] px-2.5 py-0.5 text-xs font-bold text-[var(--on-accent)]">{daysAhead(apt.occurs_at)}</span>
                   </div>
                   <div className="mt-0.5 text-xs text-slate-500">{longDate(apt.occurs_at)} {apt.detail ? `· ${apt.detail}` : ''}</div>
                 </div>
@@ -333,13 +333,13 @@ export default function AppointmentsView({ patients, viewerUserId, authedRequest
                 <div key={apt.id} className="flex items-center gap-4 rounded-xl border border-slate-200/80 bg-slate-50/40 p-3">
                   <div className="w-14 flex-none rounded-xl bg-slate-100 py-2 text-center">
                     <div className="text-lg font-bold leading-tight text-slate-600">{dayBadge(apt.occurs_at).day}</div>
-                    <div className="text-[11px] text-slate-500">{dayBadge(apt.occurs_at).month}</div>
+                    <div className="text-xs text-slate-500">{dayBadge(apt.occurs_at).month}</div>
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-semibold text-slate-700">{apt.place} — {apt.title}</div>
                     <div className="mt-0.5 text-xs text-slate-500">{formatDate(apt.occurs_at)}{apt.status === 'canceled' && apt.detail ? ` · ${apt.detail}` : ''}</div>
                   </div>
-                  <span className={`flex-none rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${badge.cls}`}>{badge.text}</span>
+                  <span className={`flex-none rounded-full border px-2.5 py-0.5 text-xs font-bold ${badge.cls}`}>{badge.text}</span>
                 </div>
               );
             })}
