@@ -10,3 +10,5 @@ dist/
 Thumbs.db
 .neon
 _worker.bundle
+.taste-skill/gate*
+.taste-skill/build.done.json
