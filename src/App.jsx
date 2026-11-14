@@ -22,7 +22,7 @@ const emptyData = {
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
-/** ธีมการแสดงผล: 'system' ตามระบบ / 'light' / 'dark' — เก็บใน localStorage */
+/** ธีมการแสดงผล: เริ่มที่ 'light' / 'dark' / 'system' — เก็บใน localStorage */
 const THEME_KEY = 'gx-theme';
 
 function systemPrefersDark() {
@@ -370,9 +370,9 @@ function Dashboard() {
   // View switching (dashboard / settings) — lightweight, no router.
   const [view, setView] = useState('dashboard');
 
-  // ---- ธีมสว่าง/มืด (index.html ใส่คลาส .dark ก่อน paint แล้ว — ที่นี่ sync ค่า + จัดการ transition) ----
+  // ---- ธีมสว่าง/มืด (ค่าเริ่มต้น = สว่าง; index.html ใส่คลาส .dark ก่อน paint แล้ว — ที่นี่ sync ค่า + จัดการ transition) ----
   const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem(THEME_KEY) || 'system'; } catch { return 'system'; }
+    try { return localStorage.getItem(THEME_KEY) || 'light'; } catch { return 'light'; }
   });
   const [systemDark, setSystemDark] = useState(systemPrefersDark);
   const dark = themeIsDark(theme, systemDark);
