@@ -12,3 +12,4 @@ Thumbs.db
 _worker.bundle
 .taste-skill/gate*
 .taste-skill/build.done.json
+.migration/
