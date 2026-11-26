@@ -12,18 +12,62 @@ function buildUrl(functionName, query) {
 
 async function parseError(response) {
   const result = await response.json().catch(() => ({}));
-  return new Error(result.error || `คำขอไม่สำเร็จ (${response.status})`);
+  const error = new Error(result.error || `คำขอไม่สำเร็จ (${response.status})`);
+  error.status = response.status;
+  return error;
 }
 
-export async function apiRequest(functionName, { token, method = 'GET', body, query } = {}) {
-  const response = await fetch(buildUrl(functionName, query), {
-    method,
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+/** Errors worth retrying: the DB woke from scale-to-zero, or the edge hiccuped. */
+const RETRYABLE_STATUS = new Set([502, 503, 504]);
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch with a small bounded retry for GET requests.
+ * Neon suspends idle databases; the first query after a nap can answer 503
+ * (our API maps that case) for a couple of seconds. Retrying quietly keeps the
+ * dashboard from flashing an error the user cannot act on.
+ */
+async function fetchWithRetry(url, init, retries) {
+  for (let attempt = 0; ; attempt += 1) {
+    let response;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      if (attempt >= retries) {
+        throw new Error('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+      }
+      await wait(1200 * 2 ** attempt);
+      continue;
+    }
+
+    if (response.ok || attempt >= retries || !RETRYABLE_STATUS.has(response.status)) {
+      return response;
+    }
+
+    const retryAfter = Number(response.headers.get('retry-after'));
+    const delay = Number.isFinite(retryAfter) && retryAfter > 0
+      ? Math.min(retryAfter, 10) * 1000
+      : 1200 * 2 ** attempt;
+    await wait(delay);
+  }
+}
+
+export async function apiRequest(functionName, { token, method = 'GET', body, query, retries = 0 } = {}) {
+  const response = await fetchWithRetry(
+    buildUrl(functionName, query),
+    {
+      method,
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     },
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+    method === 'GET' ? Math.max(0, retries) : 0,
+  );
 
   if (!response.ok) throw await parseError(response);
   return response.json();

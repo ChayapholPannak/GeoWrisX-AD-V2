@@ -32,7 +32,26 @@ function getClient(env) {
 
 /** Parameterised query ($1, $2, ...) returning the rows array. */
 export async function query(env, text, params = []) {
-  return getClient(env).query(text, params);
+  try {
+    return await getClient(env).query(text, params);
+  } catch (error) {
+    if (error instanceof HttpError) throw error;
+    // Neon scale-to-zero wakes on the first query; a cold connection can fail
+    // with a network-level error. Surface it as a retryable 503 instead of a
+    // generic 500 so the client can wait a moment and try again.
+    if (isTransientDbError(error)) {
+      console.error('Database transient error:', error?.message || error);
+      throw new HttpError(503, 'ฐานข้อมูลกำลังตื่นจากการพัก กรุณาลองใหม่อีกครั้งในอีก 2–3 วินาที');
+    }
+    throw error;
+  }
+}
+
+const TRANSIENT_DB_RE = /(fetch failed|ECONNRESET|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up|terminating connection|connection terminated|connection timeout|timed out|timeout expired|NeonDbError[^]*connect)/i;
+
+function isTransientDbError(error) {
+  const text = `${error?.name || ''} ${error?.message || ''} ${error?.code || ''}`;
+  return TRANSIENT_DB_RE.test(text);
 }
 
 /** Convenience helper for queries that must return exactly one row. */

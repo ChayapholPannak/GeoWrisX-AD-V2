@@ -435,7 +435,7 @@ function Dashboard() {
 
   const loadPrefs = useCallback(async () => {
     try {
-      const result = await authedRequest('prefs');
+      const result = await authedRequest('prefs', { retries: 1 });
       if (result && result.prefs && typeof result.prefs === 'object') {
         setPrefs((current) => ({ ...current, ...result.prefs }));
       }
@@ -469,10 +469,13 @@ function Dashboard() {
     if (quiet) setRefreshing(true); else setLoading(true);
     setError('');
     try {
-      const result = await authedRequest('dashboard');
+      // GET is safe to retry: Neon may be waking from scale-to-zero (503).
+      const result = await authedRequest('dashboard', { retries: 2 });
       setData({ ...emptyData, ...result });
     } catch (e) {
-      setError(e.message || 'โหลดข้อมูลไม่ได้');
+      setError(e.status === 503
+        ? 'ฐานข้อมูลเพิ่งตื่นจากการพักและตอบช้ากว่าปกติ ระบบลองซ้ำให้แล้ว — กด "ลองใหม่" อีกครั้ง'
+        : e.message || 'โหลดข้อมูลไม่ได้');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -489,7 +492,7 @@ function Dashboard() {
     const collected = [];
     for (const patient of targets) {
       try {
-        const result = await authedRequest('appointments', { query: { patient_id: patient.id } });
+        const result = await authedRequest('appointments', { query: { patient_id: patient.id }, retries: 1 });
         for (const apt of result.appointments || []) collected.push({ ...apt, patient_name: patient.display_name });
       } catch {
         // ทำงานต่อแบบเงียบ — ปุ่ม badge และแถบเตือนอาจยังว่าง
@@ -515,7 +518,7 @@ function Dashboard() {
   const loadInvites = useCallback(async () => {
     // Optional feature: a failed invite lookup must not break the dashboard.
     try {
-      const result = await authedRequest('invites');
+      const result = await authedRequest('invites', { retries: 1 });
       setPendingInvites(result.invites || []);
     } catch {
       setPendingInvites([]);
@@ -943,12 +946,20 @@ function Dashboard() {
           {error && (
             <div role="alert" className="mt-5 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
               <AlertTriangle size={18} className="mt-0.5 shrink-0" />
-              <div>
+              <div className="flex-1">
                 <div className="font-semibold">โหลดข้อมูลไม่สำเร็จ</div>
                 <div className="mt-1 leading-6">{error}</div>
                 <div className="mt-2 text-xs text-rose-700">
                   ตรวจสอบว่ารัน db/schema.sql กับ Neon แล้ว และตั้งค่า NEON_DATABASE_URL, CLERK_SECRET_KEY ครบถ้วน
                 </div>
+                <button
+                  type="button"
+                  onClick={() => loadDashboard(true)}
+                  disabled={refreshing}
+                  className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[var(--accent)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] hover:bg-[var(--accent-strong)] disabled:opacity-60"
+                >
+                  <RefreshCw size={13} className={refreshing ? 'animate-spin' : ''} /> ลองใหม่
+                </button>
               </div>
             </div>
           )}

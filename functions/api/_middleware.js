@@ -10,7 +10,9 @@ const SECURITY_HEADERS = {
   'Referrer-Policy': 'no-referrer',
   'X-Frame-Options': 'DENY',
   'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
-  'Cross-Origin-Resource-Policy': 'cross-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  // API payloads are JSON only: never render them as a document, never frame them.
+  'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
 };
 
 export async function onRequest(context) {

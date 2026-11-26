@@ -34,7 +34,11 @@ export function route(handler) {
       return await handler(context);
     } catch (error) {
       if (error instanceof HttpError) {
-        return json(error.status, { error: error.message });
+        return json(
+          error.status,
+          { error: error.message },
+          error.status === 503 ? { 'Retry-After': '2' } : {},
+        );
       }
       console.error('Unhandled API error:', error?.stack || error?.message || error);
       return json(500, { error: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์ กรุณาลองใหม่อีกครั้ง' });

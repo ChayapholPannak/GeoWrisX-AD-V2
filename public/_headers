@@ -1,11 +1,15 @@
 # Static hardening applied to every Pages asset response.
 # (The Pages Functions already set their own headers in _middleware.js.)
+
 /*
   X-Frame-Options: DENY
   X-Content-Type-Options: nosniff
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  X-Permitted-Cross-Domain-Policies: none
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self' https://*.clerk.accounts.dev https://*.clerk.com; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://*.clerk.com https://img.clerk.com https://images.clerk.dev; connect-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com; frame-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests
 
 # Vite outputs content-hashed assets — cache them hard.
 /assets/*

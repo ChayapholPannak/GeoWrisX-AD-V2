@@ -24,6 +24,21 @@ function pulseIcon() {
   });
 }
 
+/** Great-circle distance in metres (mirrors the server-side geofence math). */
+function haversineM(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const rad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * rad;
+  const dLng = (lng2 - lng1) * rad;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function formatDistance(metres) {
+  return metres >= 1000 ? `${(metres / 1000).toFixed(2)} กม.` : `${Math.round(metres)} ม.`;
+}
+
 function TrackMap({ points, lastPoint, geofences, drawing, drawPoints, onMapClick }) {
   const mapRef = useRef(null);
   const containerRef = useRef(null);
@@ -96,6 +111,16 @@ function TrackMap({ points, lastPoint, geofences, drawing, drawPoints, onMapClic
       const coords = points.map((p) => [p.lat, p.lng]);
       L.polyline(coords, { color: '#14b8a6', weight: 3, opacity: 0.8 }).addTo(layers);
       coords.forEach((c) => bounds.push(c));
+      // Origin marker — the pulse marker marks the latest point, so history
+      // reads left-to-right from the small teal dot to the pulsing one.
+      const first = points[0];
+      L.circleMarker([first.lat, first.lng], {
+        radius: 5,
+        color: '#0f766e',
+        weight: 2,
+        fillColor: '#5eead4',
+        fillOpacity: 1,
+      }).addTo(layers).bindTooltip(`จุดเริ่ม · ${new Date(first.recorded_at).toLocaleTimeString('th-TH')}`, { direction: 'top' });
     }
     for (const fence of geofences) {
       if (fence.kind === 'circle') {
@@ -144,6 +169,7 @@ function TrackMap({ points, lastPoint, geofences, drawing, drawPoints, onMapClic
 export default function TrackView({ patients, viewerUserId, authedRequest, onNotice, onBack }) {
   const activePatients = patients.filter((p) => !p.is_archived);
   const [patientId, setPatientId] = useState(activePatients[0]?.id || '');
+  const [hours, setHours] = useState(24);
   const [track, setTrack] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -209,7 +235,8 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
     if (!patientId) return;
     if (quiet) setRefreshing(true); else setLoading(true);
     try {
-      const result = await authedRequest('track', { query: { patient_id: patientId } });
+      // Retry once: Neon wakes from scale-to-zero on the first query (503).
+      const result = await authedRequest('track', { query: { patient_id: patientId, hours }, retries: 1 });
       setTrack(result);
     } catch (e) {
       onNotice({ kind: 'error', text: e.message || 'โหลดข้อมูลตำแหน่งไม่สำเร็จ' });
@@ -217,7 +244,7 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
       setLoading(false);
       setRefreshing(false);
     }
-  }, [authedRequest, patientId, onNotice]);
+  }, [authedRequest, patientId, hours, onNotice]);
 
   useEffect(() => {
     setTrack(null);
@@ -316,6 +343,15 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
   const points = track?.points || [];
   const lastPoint = track?.last_point || null;
 
+  // Path length straight from the returned history — no extra request.
+  const routeMeters = useMemo(() => {
+    let total = 0;
+    for (let i = 1; i < points.length; i += 1) {
+      total += haversineM(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+    }
+    return total;
+  }, [points]);
+
   return (
     <div className="app-fade mx-auto app-sheet max-w-[1400px] px-4 py-6 sm:px-7 lg:px-9 lg:py-8">
       <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -333,6 +369,18 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
             className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700"
           >
             {activePatients.map((p) => <option key={p.id} value={p.id}>{p.display_name}</option>)}
+          </select>
+          <select
+            value={hours}
+            onChange={(e) => setHours(Number(e.target.value))}
+            aria-label="ช่วงเวลาย้อนหลังของเส้นทาง"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-700"
+          >
+            <option value={1}>1 ชม.</option>
+            <option value={6}>6 ชม.</option>
+            <option value={24}>24 ชม.</option>
+            <option value={72}>3 วัน</option>
+            <option value={168}>7 วัน</option>
           </select>
           <button onClick={() => loadTrack(true)} disabled={refreshing} className="refresh-control inline-flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> รีเฟรช
@@ -355,7 +403,8 @@ export default function TrackView({ patients, viewerUserId, authedRequest, onNot
               )}
             </div>
             <div className="text-xs text-slate-500">
-              {lastPoint ? `จุดล่าสุด ${formatDate(lastPoint.recorded_at)} · ±${lastPoint.acc_m ?? '?'} m` : `${points.length} จุดใน ${track?.window_hours || 24} ชม.`}
+              {points.length >= 2 ? `${points.length} จุด · เส้นทาง ${formatDistance(routeMeters)} · ` : ''}
+              {lastPoint ? `ล่าสุด ${formatDate(lastPoint.recorded_at)} · ±${lastPoint.acc_m ?? '?'} m` : `ยังไม่มีจุด GPS ใน ${track?.window_hours || hours} ชม. ล่าสุด`}
             </div>
           </div>
           <div className="mt-3">
